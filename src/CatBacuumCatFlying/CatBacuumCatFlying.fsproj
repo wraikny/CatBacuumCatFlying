@@ -6,6 +6,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Logic.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Affogato\src\Affogato\Affogato.fsproj" />
     <ProjectReference Include="..\..\..\Mille-Feuille\Dev\Mille-Feuille.Core\Mille-Feuille.csproj" />

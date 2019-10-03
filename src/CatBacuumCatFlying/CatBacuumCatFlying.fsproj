@@ -5,7 +5,7 @@
     <TargetFramework>net472</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="CatBacuumCatFlying.fs" />
+    <Compile Include="Logic.fs" />
   <ItemGroup>
     <ProjectReference Include="..\..\..\Affogato\src\Affogato\Affogato.fsproj" />
     <ProjectReference Include="..\..\..\Mille-Feuille\Dev\Mille-Feuille.Core\Mille-Feuille.csproj" />

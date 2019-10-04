@@ -9,6 +9,9 @@
     <Compile Include="Utils.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="Logic.fs" />
+    <Compile Include="View\Camera.fs" />
+    <Compile Include="View\GameObjectView.fs" />
+    <Compile Include="View\MainScene.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

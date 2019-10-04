@@ -3,7 +3,7 @@ namespace Cbcf.Logic
 open Cbcf
 open Affogato.Helper
 open Affogato
-
+open Affogato.Collections
 
 module GameObject =
   let inline get (x: ^a): GameObject =
@@ -57,8 +57,13 @@ module Player =
 
 
 module FlyingCat =
+  let inline outOfArea (x: FlyingCat) =
+    if Rectangle2.right x.object.Area < 0.0f then Some x else None
+
   let inline update x =
-    x |> GameObject.move
+    x
+    |> GameObject.move
+    |> outOfArea
 
 
 open wraikny.Tart.Core
@@ -68,7 +73,24 @@ module GameModel =
     { model with player = f model.player }
 
   let inline mapFlyingCat f (model: GameModel): GameModel =
-    { model with flyingCats = Array.map f model.flyingCats }
+    { model with flyingCats = Array.choose f model.flyingCats }
+
+  let inline calculate (model: GameModel) =
+    let collidedMap =
+      model.flyingCats
+      |> Seq.map (fun x ->
+        if GameObject.inCollision model.player x then
+          x.Key, false
+        else
+          x.Key, true
+      )
+      |> HashMap.ofSeq
+
+
+    { model with
+        flyingCats = model.flyingCats |> Array.filter (fun x -> HashMap.find x.Key collidedMap)
+    }
+
 
   let updateModel (model: GameModel): GameModel =
     let count = model.count + one
@@ -82,6 +104,7 @@ module GameModel =
 
   let tick model =
     let stg = model.setting
+
     model
     |> updateModel
     |> mapPlayer (Player.update stg)

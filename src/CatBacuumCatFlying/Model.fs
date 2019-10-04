@@ -42,7 +42,7 @@ type Setting = {
   levelScoreStage: uint32
   levelFrameStage: uint32
 } with
-  member x.PlayerInitPosition =
+  member inline x.PlayerInitPosition =
     let ps = x.playerSize
     Vector2.init (x.playerX - ps.x * 0.5f) (x.floorHeight - ps.y)
 
@@ -53,21 +53,21 @@ type GameObject = {
   pos: float32 Vector2
   velocity: float32 Vector2
 } with
-  member o.Area = Rectangle.init o.pos o.size
-  member o.Foot = { o.pos with x = o.pos.x + o.size.x * 0.5f }
+  member inline o.Area = Rectangle.init o.pos o.size
+  member inline o.Foot = { o.pos with x = o.pos.x + o.size.x * 0.5f }
 
-  member o.object = o
+  member inline o.object = o
 
-  static member Init (pos, size, velocity) = {
+  static member inline Init (pos, size, velocity) = {
     key = System.Object()
     size = size
     pos = pos
     velocity = velocity
   }
 
-  static member Init(pos, size) = GameObject.Init(pos, size, zero)
+  static member inline Init(pos, size) = GameObject.Init(pos, size, zero)
 
-  static member Map(x: GameObject, f) = f x
+  static member inline Map(x: GameObject, f) = f x
 
 //type Player = {
 //  object: GameObject
@@ -90,8 +90,10 @@ type FlyingCatKind =
 type FlyingCat = {
   object: GameObject
   kind: FlyingCatKind
+  point: uint32
 } with
-  static member Map(x: FlyingCat, f) = { x with object = f x.object }
+  static member inline Map(x: FlyingCat, f) = { x with object = f x.object }
+  member inline x.Key = x.object.key
 
 
 type GameModel = {
@@ -105,10 +107,10 @@ type GameModel = {
   player: GameObject
   flyingCats: FlyingCat []
 } with
-  member x.Speeds =
+  member inline x.Speeds =
     x.setting.initSpeeds + (float32 x.level) *. x.setting.diffSpeeds
 
-  static member Init(setting) = {
+  static member inline Init(setting) = {
     setting = setting
     count = 0u
     score = 0u
@@ -124,7 +126,7 @@ type Model = {
   mode: Mode
   game: GameModel
 } with
-  static member Init(setting) = {
+  static member inline Init(setting) = {
     mode = Game
     game = GameModel.Init(setting)
   }

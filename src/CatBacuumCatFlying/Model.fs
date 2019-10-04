@@ -31,6 +31,8 @@ type Setting = {
   playerSize: float32 Vector2
   flyingCatsSize: float32 Vector2
 
+  playerX: float32
+
   floorHeight: float32
   ceilingHeight: float32
 
@@ -39,31 +41,44 @@ type Setting = {
 
   levelScoreStage: uint32
   levelFrameStage: uint32
-}
+} with
+  member x.PlayerInitPosition =
+    let ps = x.playerSize
+    Vector2.init (x.playerX - ps.x * 0.5f) (x.floorHeight - ps.y)
 
 
 type GameObject = {
   key: obj
   size: float32 Vector2
   pos: float32 Vector2
+  velocity: float32 Vector2
 } with
   member o.Area = Rectangle.init o.pos o.size
   member o.Foot = { o.pos with x = o.pos.x + o.size.x * 0.5f }
 
   member o.object = o
 
-  static member Init size pos = {
+  static member Init (pos, size, velocity) = {
     key = System.Object()
     size = size
     pos = pos
+    velocity = velocity
   }
+
+  static member Init(pos, size) = GameObject.Init(pos, size, zero)
+
   static member Map(x: GameObject, f) = f x
 
-type Player = {
-  object: GameObject
-  velocity: float32 Vector2
-} with
-  static member Map(x: Player, f) = { x with object = f x.object }
+//type Player = {
+//  object: GameObject
+//  velocity: float32 Vector2
+//} with
+//  static member Map(x: Player, f) = { x with object = f x.object }
+
+//  static member Init(size, pos) = {
+//    velocity = zero
+//    object = GameObject.Init(pos, size)
+//  }
 
 
 type FlyingCatKind =
@@ -79,7 +94,7 @@ type FlyingCat = {
   static member Map(x: FlyingCat, f) = { x with object = f x.object }
 
 
-type Model = {
+type GameModel = {
   setting: Setting
 
   count: uint32
@@ -87,12 +102,38 @@ type Model = {
   level: int
   isHold: bool
 
-  player: Player
+  player: GameObject
   flyingCats: FlyingCat []
 } with
   member x.Speeds =
     x.setting.initSpeeds + (float32 x.level) *. x.setting.diffSpeeds
 
+  static member Init(setting) = {
+    setting = setting
+    count = 0u
+    score = 0u
+    level = 1
+    isHold = false
+    player = GameObject.Init(setting.PlayerInitPosition, setting.playerSize)
+    flyingCats = Array.empty
+  }
+
+type Mode = Game
+
+type Model = {
+  mode: Mode
+  game: GameModel
+} with
+  static member Init(setting) = {
+    mode = Game
+    game = GameModel.Init(setting)
+  }
+
+  static member inline Set(model, x) =
+    { model with game = x }
+
+
 type Msg =
   | Tick
-  | Hold of bool
+  | Push
+  | Release

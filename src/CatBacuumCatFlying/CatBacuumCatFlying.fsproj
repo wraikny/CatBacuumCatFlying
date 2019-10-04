@@ -6,6 +6,7 @@
     <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Utils.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="Logic.fs" />
     <Compile Include="Program.fs" />

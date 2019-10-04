@@ -1,12 +1,8 @@
-namespace Cbcf
+namespace Cbcf.Logic
 
+open Cbcf
 open Affogato.Helper
 open Affogato
-
-
-[<AutoOpen>]
-module Utils =
-  let inline outOf a b x = x < a || b < x
 
 
 module GameObject =
@@ -23,51 +19,58 @@ module GameObject =
     x |>> fun (o: GameObject) ->
       { o with pos = f o.pos }
 
+  let inline mapVelocity f x =
+    x |>> fun (o: GameObject) ->
+      { o with velocity = f o.velocity }
+      
+
+  let inline move x =
+    x |>> fun (o: GameObject) ->
+      { o with pos = o.pos + o.velocity }
+
 
 module Player =
-  let inline mapVelocity f x =
-    { x with velocity = f x.velocity }
-      
   let inline clampY (setting: Setting) (isReflectable) x =
-    let yMin, yMax = setting.floorHeight, setting.ceilingHeight
-    if (GameObject.pos x).y |> outOf yMin yMax then
-      x |> GameObject.mapPos (fun p -> { p with y = setting.floorHeight })
-        |> mapVelocity (fun v ->
-          if isReflectable then
-            { v with y = -v.y }
-          else zero
-        )
-    else
-      x
+    let floorHeight, ceilingHeight = setting.floorHeight, setting.ceilingHeight
+    let area = GameObject.area x
+    let up, down = Rectangle2.up area, Rectangle2.down area
 
-  let inline bacuum (speeds: Speeds) x =
-    x
-    |> mapVelocity ((+) <| Vector2.init 0.0f speeds.bacuumSpeed)
+    let inline setPosY y o =
+      o |> GameObject.mapPos (fun p -> { p with y = y })
+        //|> GameObject.mapVelocity (fun v ->
+        //  if isReflectable then
+        //    { v with y = -v.y }
+        //  else zero
+        //)
+
+    if down >= floorHeight then
+      x |> setPosY (floorHeight - area.size.y)
+    elif up <= ceilingHeight then
+      x |> setPosY (ceilingHeight)
+    else x
 
 
   let inline update setting x =
     x
-    |> GameObject.mapPos ((+) x.velocity)
+    |> GameObject.move
     |> clampY setting false
 
 
 module FlyingCat =
-  let inline move (speeds: Speeds) (x: FlyingCat) =
-    x |> GameObject.mapPos((+) <| Vector2.init (-speeds.flyingCatsSpeed) zero)
-
-  let inline update setting x =
-    x
+  let inline update x =
+    x |> GameObject.move
 
 
-module Update =
-  open wraikny.Tart.Core
-  let mapPlayer f (model: Model): Model =
+open wraikny.Tart.Core
+
+module GameModel =
+  let inline mapPlayer f (model: GameModel): GameModel =
     { model with player = f model.player }
 
-  let mapFlyingCat f (model: Model): Model =
+  let inline mapFlyingCat f (model: GameModel): GameModel =
     { model with flyingCats = Array.map f model.flyingCats }
 
-  let updateModel (model: Model): Model =
+  let updateModel (model: GameModel): GameModel =
     let count = model.count + one
     { model with
         count = count
@@ -77,24 +80,43 @@ module Update =
           else model.level
     }
 
-  let update (msg: Msg) (model: Model): Model * Cmd<Msg, _> =
-    msg |> function
-    | Tick ->
-      let stg = model.setting
-      model
-      |> updateModel
-      |> mapPlayer (Player.update stg)
-      |> mapFlyingCat (FlyingCat.update stg)
-      , Cmd.none
+  let tick model =
+    let stg = model.setting
+    model
+    |> updateModel
+    |> mapPlayer (Player.update stg)
+    |> mapFlyingCat (FlyingCat.update)
+    , Cmd.none
 
-    | Hold t ->
-      { model with
-          isHold = t
-          player =
-            let s = model.Speeds
-            { model.player with
-                velocity =
-                  if t then s.bacuumSpeed else s.fallingSpeed
-                  |> Vector2.init zero
-            }
-      }, Cmd.none
+  let push model =
+    { model with
+        isHold = true
+        player =
+          { model.player with
+              velocity = Vector2.init zero -model.Speeds.bacuumSpeed
+          }
+    }, Cmd.none
+
+  let release model =
+    { model with
+        isHold = false
+        player =
+          { model.player with
+              velocity = Vector2.init zero model.Speeds.fallingSpeed
+          }
+    }, Cmd.none
+
+
+module Model =
+  let inline chain f m =
+    let g, c = f m.game
+    set g m, c
+
+  let update (msg: Msg) (model: Model) =
+    (model.mode, msg) |> function
+    | Game, Tick ->
+      model |> chain GameModel.tick
+    | Game, Push ->
+      model |> chain GameModel.push
+    | Game, Release ->
+      model |> chain GameModel.release

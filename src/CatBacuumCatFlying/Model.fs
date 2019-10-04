@@ -1,7 +1,8 @@
 ﻿namespace Cbcf
 
-open Affogato.Helper
 open Affogato
+open Affogato.Helper
+open FSharpPlus
 
 type Speeds = {
   bacuumSpeed: float32
@@ -38,6 +39,11 @@ type Setting = {
 
   initSpeeds: Speeds
   diffSpeeds: Speeds
+
+  generatePerMin: float32 * float32
+  generateX: float32
+
+  hp: float32
 
   levelScoreStage: uint32
   levelFrameStage: uint32
@@ -82,15 +88,13 @@ type GameObject = {
 
 
 type FlyingCatKind =
-  | Damage of float32
-  | Heal of float32
-  | Score of float32
+  | HP of float32
+  | Score of uint32
 
 
 type FlyingCat = {
   object: GameObject
   kind: FlyingCatKind
-  point: uint32
 } with
   static member inline Map(x: FlyingCat, f) = { x with object = f x.object }
   member inline x.Key = x.object.key
@@ -98,29 +102,54 @@ type FlyingCat = {
 
 type GameModel = {
   setting: Setting
+  speeds: Speeds
+  generatePeriod: uint32
+  generateCount: uint32
 
   count: uint32
+  hp: float32
   score: uint32
   level: int
   isHold: bool
 
+  //nextId: uint32
+
   player: GameObject
   flyingCats: FlyingCat []
 } with
-  member inline x.Speeds =
-    x.setting.initSpeeds + (float32 x.level) *. x.setting.diffSpeeds
+  //member inline x.Speeds =
+  //  x.setting.initSpeeds + (float32 x.level) *. x.setting.diffSpeeds
 
   static member inline Init(setting) = {
     setting = setting
+    speeds = setting.initSpeeds
+    generatePeriod = uint32 <| 1800.0f / (fst setting.generatePerMin)
+    generateCount = 0u
+
     count = 0u
+    hp = setting.hp
     score = 0u
     level = 1
     isHold = false
+
+    //nextId = 0u
+
     player = GameObject.Init(setting.PlayerInitPosition, setting.playerSize)
     flyingCats = Array.empty
   }
 
-type Mode = Game
+  static member inline LevelUp(x) =
+    let level = x.level + one
+    { x with
+        level = level
+        speeds = x.speeds + x.setting.diffSpeeds
+        generatePeriod =
+          let pmi, pmd = x.setting.generatePerMin
+          uint32 <| 3600.0f / (pmi + (float32 level) * pmd)
+    }
+
+
+type Mode = | Game
 
 type Model = {
   mode: Mode
@@ -134,8 +163,14 @@ type Model = {
   static member inline Set(model, x) =
     { model with game = x }
 
+type GameMsg =
+  | AddFlyingCat of FlyingCat
+  | Tick
 
 type Msg =
-  | Tick
+  | GameMsg of GameMsg
   | Push
   | Release
+with
+  static member inline Tick = GameMsg Tick
+  static member inline AddFlyingCat x = GameMsg <| AddFlyingCat x

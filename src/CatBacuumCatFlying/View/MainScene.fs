@@ -7,15 +7,13 @@ module Extension =
 
 
 type ViewSetting = {
-  player: string
-  score: string
-  damage: string
-  heal: string
+  theCatApiCacheDirectory: string
 }
 
 
 open Affogato
 open Affogato.Helper
+open wraikny.Tart.Helper
 open wraikny.Tart.Core
 open wraikny.MilleFeuille
 open wraikny.MilleFeuille.Objects
@@ -27,9 +25,11 @@ open Cbcf
 type MainScene(setting: Setting, viewSetting: ViewSetting) =
   inherit Scene()
 
+  let initModel = Model.Init(setting)
+
   let messenger =
     Messenger.Create({seed = 0}, {
-      init = Model.Init(setting), Cmd.none
+      init = initModel, Cmd.none
       update = Logic.Model.update
       view = id
     })
@@ -49,28 +49,28 @@ type MainScene(setting: Setting, viewSetting: ViewSetting) =
   let layer = new asd.Layer2D()
 
   let player =
-    new GameObjectView(
-      Texture = asd.Engine.Graphics.CreateTexture2D(viewSetting.player)
-    )
+    new GameObjectView()
+      //Texture = asd.Engine.Graphics.CreateTexture2D(viewSetting.player)
+    //)
+
+  let mutable lastModel = initModel
 
   do
-    //messenger.Msg.Add(printfn "%A")
+    messenger.ViewModel.Add(fun x -> lastModel <- x)
 
     messenger
       .ViewModel
+      .Where(fun x -> x.mode = Game)
       .Select(fun x -> x.game.player)
-      .Add(player.Update)
-
-    let healTex = asd.Engine.Graphics.CreateTexture2D(viewSetting.heal)
-    let damageTex = asd.Engine.Graphics.CreateTexture2D(viewSetting.damage)
-    let scoreTex = asd.Engine.Graphics.CreateTexture2D(viewSetting.score)
+      .Add((player :> IUpdatee<_>).Update)
 
     messenger
       .ViewModel
+      .Where(fun x -> x.mode = Game)
       .Select(fun x ->
-        [ for a in x.game.flyingCats -> (a.Key, a) ]
+        [ for a in x.game.flyingCats -> (a.Key, a.object) ]
       ).Subscribe(new ActorsUpdater<_, _, _>(layer, {
-        create = fun() -> new FlyingCatView(healTex, damageTex, scoreTex)
+        create = fun() -> new GameObjectView()
         onError = raise
         onCompleted = ignore
       }))
@@ -93,6 +93,7 @@ type MainScene(setting: Setting, viewSetting: ViewSetting) =
 
 
   override this.OnUpdated() =
+    
     messenger.Enqueue(Msg.Tick)
 
     asd.Engine.Keyboard.GetKeyState asd.Keys.Space

@@ -35,10 +35,7 @@ let setting = {
 open Cbcf.View
 
 let viewSetting = {
-  player = "animal_stand_neko.png"
-  score = "animal_stand_neko.png"
-  damage = "animal_stand_neko.png"
-  heal = "animal_stand_neko.png"
+  theCatApiCacheDirectory = "TheCatApiCache"
 }
 
 [<STAThread; EntryPoint>]
@@ -50,7 +47,7 @@ let main _ =
   asd.Engine.File.AddRootDirectory("Resources")
   #endif
 
-  asd.Engine.ChangeScene(new MainScene(setting, viewSetting))
+  //asd.Engine.ChangeScene(new MainScene(setting, viewSetting))
 
   while asd.Engine.DoEvents() do asd.Engine.Update()
 

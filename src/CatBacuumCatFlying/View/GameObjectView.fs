@@ -1,7 +1,9 @@
 ﻿namespace Cbcf.View
+
 open wraikny.MilleFeuille
 open Affogato
 open Affogato.Helper
+open wraikny.Tart.Helper
 open Cbcf
 
 type GameObjectView() =
@@ -30,6 +32,7 @@ type GameObjectView() =
       if !lastSize <> zero then
         textureView.Scale <- (Vector2.toVector2DF !lastSize) / x.Size.To2DF()
 
+  
   member this.Update(x: GameObject) =
     let area = x.Area
 
@@ -42,8 +45,9 @@ type GameObjectView() =
       if textureView.Texture <> null then
         textureView.Scale <- size / textureView.Texture.Size.To2DF()
 
+  interface IUpdatee<GameObject> with
+    member this.Update(x) = this.Update(x)
 
-open wraikny.Tart.Helper
 
 type FlyingCatView(healTex, damageTex, scoreTex) =
   inherit GameObjectView()

@@ -1,7 +1,7 @@
 ﻿namespace Cbcf.View
 open wraikny.MilleFeuille
 
-type Camera(setting: Cbcf.Setting) =
+type Camera(setting: Cbcf.GameSetting) =
   inherit asd.CameraObject2D()
 
   let areaSize = setting.areaSize |> Vector2.toVector2DI

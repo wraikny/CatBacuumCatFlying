@@ -12,6 +12,7 @@
     <Compile Include="Logic.fs" />
     <Compile Include="View\Camera.fs" />
     <Compile Include="View\GameObjectView.fs" />
+    <Compile Include="View\Window.fs" />
     <Compile Include="View\MainScene.fs" />
     <Compile Include="Program.fs" />
     <None Include="paket.references" />

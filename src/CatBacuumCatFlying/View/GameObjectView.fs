@@ -28,7 +28,7 @@ type GameObjectView() =
     and set(x) =
       textureView.Texture <- x
       if !lastSize <> zero then
-        textureView.Scale <- (Vector2.toVector2DF !lastSize) / textureView.Texture.Size.To2DF()
+        textureView.Scale <- (Vector2.toVector2DF !lastSize) / x.Size.To2DF()
 
   member this.Update(x: GameObject) =
     let area = x.Area
@@ -41,3 +41,28 @@ type GameObjectView() =
       rect.DrawingArea <- asd.RectF(asd.Vector2DF(), size)
       if textureView.Texture <> null then
         textureView.Scale <- size / textureView.Texture.Size.To2DF()
+
+
+open wraikny.Tart.Helper
+
+type FlyingCatView(healTex, damageTex, scoreTex) =
+  inherit GameObjectView()
+
+  let lastKind = ref -1
+
+  let update x y f =
+    if !x <> y then
+      x := y
+      f(y)
+
+  interface IUpdatee<FlyingCat> with
+    member this.Update(x) =
+      base.Update(x.object)
+
+      let flag, tex = x.kind |> function
+        | HP x when x > 0.0f -> 0, healTex
+        | HP _ -> 1, damageTex
+        | Score _ -> 2, scoreTex
+
+      update lastKind flag <| fun _ ->
+        this.Texture <- tex

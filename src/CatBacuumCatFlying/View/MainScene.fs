@@ -8,6 +8,9 @@ module Extension =
 
 type ViewSetting = {
   player: string
+  score: string
+  damage: string
+  heal: string
 }
 
 
@@ -15,6 +18,7 @@ open Affogato
 open Affogato.Helper
 open wraikny.Tart.Core
 open wraikny.MilleFeuille
+open wraikny.MilleFeuille.Objects
 open System.Reactive.Linq
 
 open Cbcf
@@ -57,6 +61,23 @@ type MainScene(setting: Setting, viewSetting: ViewSetting) =
       .Select(fun x -> x.game.player)
       .Add(player.Update)
 
+    let healTex = asd.Engine.Graphics.CreateTexture2D(viewSetting.heal)
+    let damageTex = asd.Engine.Graphics.CreateTexture2D(viewSetting.damage)
+    let scoreTex = asd.Engine.Graphics.CreateTexture2D(viewSetting.score)
+
+    messenger
+      .ViewModel
+      .Select(fun x ->
+        [ for a in x.game.flyingCats -> (a.Key, a) ]
+      ).Subscribe(new ActorsUpdater<_, _, _>(layer, {
+        create = fun() -> new FlyingCatView(healTex, damageTex, scoreTex)
+        onError = raise
+        onCompleted = ignore
+      }))
+      |> ignore
+
+    //messenger.ViewModel.Add(fun x -> x.game.flyingCats.Length |> printfn "%d")
+
 
   override this.OnRegistered() =
     this.AddLayer(backLayer)
@@ -72,7 +93,7 @@ type MainScene(setting: Setting, viewSetting: ViewSetting) =
 
 
   override this.OnUpdated() =
-    messenger.Enqueue(Tick)
+    messenger.Enqueue(Msg.Tick)
 
     asd.Engine.Keyboard.GetKeyState asd.Keys.Space
     |> function

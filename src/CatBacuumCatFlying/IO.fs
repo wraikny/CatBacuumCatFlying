@@ -5,7 +5,7 @@ open FSharp.Data
 type TheCatApi = JsonProvider<"""[{ "url":"hoge" }]""">
 type TheCatApiCategory = JsonProvider<"""[{ "id":0, "name":"aaa" }]""">
 
-let getTheCatApiCategoriesAsync apiKey =
+let private getTheCatApiCategoriesAsync apiKey =
   let url = "https://api.thecatapi.com/v1/categories"
   Http.AsyncRequestString
     ( url, httpMethod = "GET",
@@ -13,7 +13,7 @@ let getTheCatApiCategoriesAsync apiKey =
       headers = [ "Accept", "application/json" ]
     )
 
-let getTheCatApiAsync (categoryIds: seq<int>) (limit: int) apiKey =
+let private getTheCatApiAsync (categoryIds: seq<int>) (limit: int) apiKey =
   let url = "https://api.thecatapi.com/v1/images/search"
 
   let categories =
@@ -42,15 +42,15 @@ open System.IO
 open System.Drawing
 open System.Text
 
-let downloadImage (url: string) = async {
+let private downloadImage (url: string) = async {
   use client = new WebClient()
   return! client.OpenReadTaskAsync(url) |> Async.AwaitTask
 }
 
-let urlToFilename url =
+let private urlToFilename url =
   sprintf "%s.png" (Path.GetFileNameWithoutExtension url)
 
-let saveImageStreamAsPng (filename: string) (stream: Stream) =
+let private saveImageStreamAsPng (filename: string) (stream: Stream) =
   use bitmap = new Bitmap(stream)
   if bitmap <> null then
     bitmap.Save(filename, Imaging.ImageFormat.Png)
@@ -59,11 +59,11 @@ let saveImageStreamAsPng (filename: string) (stream: Stream) =
 let loadCategoryAsync apiKey = async {
   let! json = getTheCatApiCategoriesAsync apiKey
   return
-    [ for x in TheCatApiCategory.Parse json -> (x.Id, x.Name) ]
+    [| for x in TheCatApiCategory.Parse json -> (x.Id, x.Name) |]
 }
 
-let download apiKey dir categories limit dispatch = async {
-  let! json = getTheCatApiAsync categories limit apiKey
+let downloadImages apiKey dir (category, categoryName) limit dispatch = async {
+  let! json = getTheCatApiAsync [|category|] limit apiKey
   
   let! streams =
     TheCatApi.Parse json
@@ -76,9 +76,9 @@ let download apiKey dir categories limit dispatch = async {
   for (url, s) in streams do
     let filename =
       urlToFilename url
-      |> sprintf "%s/%s" dir
+      |> sprintf "%s/%s/%s" dir categoryName
     saveImageStreamAsPng filename s
-    dispatch filename
+    dispatch (category, filename)
 }
 
 

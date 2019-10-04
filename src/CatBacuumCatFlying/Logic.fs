@@ -31,7 +31,7 @@ module GameObject =
 
 
 module Player =
-  let inline clampY (setting: Setting) (isReflectable) x =
+  let inline clampY (setting: GameSetting) (isReflectable) x =
     let floorHeight, ceilingHeight = setting.floorHeight, setting.ceilingHeight
     let area = GameObject.area x
     let up, down = Rectangle2.up area, Rectangle2.down area
@@ -140,7 +140,6 @@ module GameModel =
     else
       model, Cmd.none
 
-
   let update (msg: GameMsg) (model: GameModel) =
     msg |> function
     | Tick ->
@@ -185,9 +184,88 @@ module Model =
 
   let update (msg: Msg) (model: Model) =
     (model.mode, msg) |> function
-    | Game, GameMsg m ->
+    | _, AddImagePaths (c, ss) ->
+      let xs =
+        model.game.imagePaths |> Map.tryFind c
+        |> function
+          | Some x -> Array.append ss x
+          | None -> ss
+
+      let newMap = Map.add c xs model.game.imagePaths
+
+      { model with
+          game = { model.game with imagePaths = newMap }
+      }, (
+        if model.mode = WaitingMode && xs.Length > model.setting.gameStartFileCount then
+          Cmd.ofMsg(SetMode GameMode)
+        else Cmd.none
+      )
+
+    | _, SetMode SelectMode ->
+      { model with prevMode = model.mode; mode = SelectMode }
+      , IO.loadCategoryAsync model.apiKey
+        |> Async.Catch
+        |> SideEffect.performWith(function
+          | Choice1Of2 [||] ->
+            SetMode(ErrorMode <| System.Exception("Categories list is empty"))
+          | Choice1Of2 x ->
+            SetCategories x
+          | Choice2Of2 e ->
+            SetMode(ErrorMode e)
+        )
+
+    | _, SetMode (ErrorMode e as m) ->
+      { model with prevMode = model.mode; mode = m}
+      , Cmd.ofPort <| OutputLog(model.setting.errorLogPath, e.ToString())
+
+    | _, SetMode m ->
+      { model with prevMode = model.mode; mode = m }, Cmd.none
+
+    | TitleMode, LongPress ->
+      model, Cmd.ofMsg(SetMode SelectMode)
+
+    | SelectMode, SetCategories x ->
+      { model with categories = x }, Cmd.ofPort(LoadCatsCache x)
+
+    | SelectMode, Push when model.categories.Length > 0 ->
+      { model with
+          categoryIndex =
+            model.categoryIndex
+            |>> fun x -> (x + one) % model.categories.Length
+      }, Cmd.none
+
+    | SelectMode, LongPress when model.categories.Length > 0 ->
+      monad {
+        let! index = model.categoryIndex
+        let! category = model.categories |> Array.tryItem index
+
+        let task =
+          IO.downloadImages
+            model.apiKey
+            model.setting.theCatApiCacheDirectory
+            category
+            model.setting.requestLimit
+
+        return ({ model with mode = WaitingMode }, Cmd.ofPort <| SelectedCategory task)
+      }
+      |> Option.defaultValue (model, Cmd.none)
+
+    | GameMode, GameMsg m ->
       model |> chain (GameModel.update m)
-    | Game, Push ->
+
+    | GameMode, Push ->
       model |> chain GameModel.push
-    | Game, Release ->
+
+    | GameMode, Release ->
       model |> chain GameModel.release
+    
+    | ErrorMode _, LongPress ->
+      model, Cmd.ofMsg(SetMode model.prevMode)
+
+    | TitleMode, _
+    | SelectMode, _
+    | GameMode, _
+    | _, SetCategories _
+    | WaitingMode, _
+    | ErrorMode _, _
+      -> model, Cmd.none

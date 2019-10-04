@@ -2,6 +2,7 @@
 
 open Affogato
 open Affogato.Helper
+open Affogato.Collections
 open FSharpPlus
 
 type Speeds = {
@@ -27,7 +28,7 @@ type Speeds = {
 
 
 
-type Setting = {
+type GameSetting = {
   areaSize: int Vector2
   playerSize: float32 Vector2
   flyingCatsSize: float32 Vector2
@@ -75,17 +76,6 @@ type GameObject = {
 
   static member inline Map(x: GameObject, f) = f x
 
-//type Player = {
-//  object: GameObject
-//  velocity: float32 Vector2
-//} with
-//  static member Map(x: Player, f) = { x with object = f x.object }
-
-//  static member Init(size, pos) = {
-//    velocity = zero
-//    object = GameObject.Init(pos, size)
-//  }
-
 
 type FlyingCatKind =
   | HP of float32
@@ -101,7 +91,7 @@ type FlyingCat = {
 
 
 type GameModel = {
-  setting: Setting
+  setting: GameSetting
   speeds: Speeds
   generatePeriod: uint32
   generateCount: uint32
@@ -116,11 +106,15 @@ type GameModel = {
 
   player: GameObject
   flyingCats: FlyingCat []
+
+  imagePaths: Map<int, string []>
+  category: int
 } with
   //member inline x.Speeds =
   //  x.setting.initSpeeds + (float32 x.level) *. x.setting.diffSpeeds
 
   static member inline Init(setting) = {
+    category = zero
     setting = setting
     speeds = setting.initSpeeds
     generatePeriod = uint32 <| 1800.0f / (fst setting.generatePerMin)
@@ -136,6 +130,9 @@ type GameModel = {
 
     player = GameObject.Init(setting.PlayerInitPosition, setting.playerSize)
     flyingCats = Array.empty
+
+    imagePaths = Map.empty
+
   }
 
   static member inline LevelUp(x) =
@@ -148,29 +145,114 @@ type GameModel = {
           uint32 <| 3600.0f / (pmi + (float32 level) * pmd)
     }
 
+type Mode =
+  | TitleMode
+  | SelectMode
+  | WaitingMode
+  | GameMode
+  | ErrorMode of exn
 
-type Mode = | Game
+type Setting = {
+  requestLimit: int
+  theCatApiCacheDirectory: string
+  gameStartFileCount: int
+  title: string
+  errorLogPath: string
+}
 
 type Model = {
+  setting: Setting
+  prevMode: Mode
   mode: Mode
   game: GameModel
+
+  apiKey: string
+  categories: (int * string) []
+  categoryIndex: int option
+
 } with
-  static member inline Init(setting) = {
-    mode = Game
-    game = GameModel.Init(setting)
+  static member inline Init(setting, gameSetting, apiKey) = {
+    setting = setting
+    prevMode = TitleMode
+    mode = TitleMode
+    game = GameModel.Init(gameSetting)
+    apiKey = apiKey
+    categories = Array.empty
+    categoryIndex = None
   }
 
   static member inline Set(model, x) =
     { model with game = x }
 
+
 type GameMsg =
   | AddFlyingCat of FlyingCat
   | Tick
 
+
 type Msg =
+  | SetMode of Mode
   | GameMsg of GameMsg
-  | Push
-  | Release
+
+  | SetCategories of (int * string) []
+  | AddImagePaths of category:int * filepath:string []
+
+  | Push | Release | LongPress
 with
   static member inline Tick = GameMsg Tick
   static member inline AddFlyingCat x = GameMsg <| AddFlyingCat x
+
+
+type Port =
+  | LoadCatsCache of (int * string) []
+  | SelectedCategory of (((int * string) -> unit) -> Async<unit>)
+  | OutputLog of filepath:string * string
+  | Close
+
+
+module ViewModel =
+  type UI =
+    | Title of string
+    | Header of string
+    | Text of string
+    | Line
+
+
+  let view model =
+    model.mode |> function
+    | TitleMode ->
+      [
+        Title model.setting.title
+        Text "by wraikny"
+        Line
+        Text "スペースボタン長押しでスタート"
+      ]
+
+    | SelectMode ->
+      [
+        yield Header "モードセレクト"
+        if model.categories.Length = 0 then
+          yield Text "データをダウンロード中..."
+          yield Text "セキュリティソフトによって処理が一時停止する場合があります"
+        else
+          yield! model.categories |>> (snd >> Text)
+          yield! [
+            Text "スペースボタンで変更"
+            Text "長押しで決定"
+          ]
+      ]
+    | WaitingMode ->
+      [
+        Text "画像ファイルをダウンロード中..."
+        Text "しばらくお待ち下さい"
+      ]
+    | GameMode -> []
+    | ErrorMode e -> [
+      Text <| e.GetType().ToString()
+      Text <| e.Message
+      Line
+      Text "スタッフ/製作者に教えてもらえると嬉しいです"
+      Text (sprintf "ログファイルは'%s'に出力されます" model.setting.errorLogPath)
+      Line
+      Text "長押しで無視して継続"
+    ]

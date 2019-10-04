@@ -1,6 +1,5 @@
 ﻿module Cbcf.IO
 
-//open FSharp.Data
 open FSharp.Data
 
 type TheCatApi = JsonProvider<"""[{ "url":"hoge" }]""">
@@ -57,47 +56,33 @@ let saveImageStreamAsPng (filename: string) (stream: Stream) =
     bitmap.Save(filename, Imaging.ImageFormat.Png)
   stream.Dispose()
 
-let loadString(path) =
-  asd.Engine.File.CreateStaticFile(path).Buffer
-  |> Encoding.UTF8.GetString
-  |> fun x -> x.Trim()
+let loadCategoryAsync apiKey = async {
+  let! json = getTheCatApiCategoriesAsync apiKey
+  return
+    [ for x in TheCatApiCategory.Parse json -> (x.Id, x.Name) ]
+}
 
-open Affogato.Collections
-open Affogato.Helper
+let download apiKey dir categories limit dispatch = async {
+  let! json = getTheCatApiAsync categories limit apiKey
+  
+  let! streams =
+    TheCatApi.Parse json
+    |> Array.map(fun x -> async{
+      let! stream = downloadImage x.Url
+      return (x.Url, stream)
+    })
+    |> Async.Parallel
+  
+  for (url, s) in streams do
+    let filename =
+      urlToFilename url
+      |> sprintf "%s/%s" dir
+    saveImageStreamAsPng filename s
+    dispatch filename
+}
 
-type TheCatImageLoader(apiKeyPath, onError) =
-  let apiKey = loadString(apiKeyPath)
 
-  member this.LoadCategoriesAsync(dispatch) =
-    async {
-      try
-        let! json = getTheCatApiCategoriesAsync apiKey
-        seq {
-          for x in TheCatApiCategory.Parse json -> (x.Id, x.Name)
-        }
-        |> HashMap.ofSeq
-        |> dispatch
-      with e -> onError e
-    }
-
-  member this.DownloadAsync(dir, categories, limit) =
-    async {
-      try
-        while true do
-          let! json = getTheCatApiAsync categories limit apiKey
-
-          let! streams =
-            TheCatApi.Parse json
-            |> Array.map(fun x -> async{
-              let! stream = downloadImage x.Url
-              return (x.Url, stream)
-            })
-            |> Async.Parallel
-
-          for (url, s) in streams do
-            urlToFilename url
-            |> sprintf "%s/%s" dir
-            |> flip saveImageStreamAsPng s
-
-      with e -> onError e
-    }
+module Altseed =
+  let loadString(path) =
+    asd.Engine.File.CreateStaticFile(path).Buffer
+    |> Encoding.UTF8.GetString

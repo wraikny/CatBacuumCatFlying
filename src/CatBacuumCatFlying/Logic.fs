@@ -23,6 +23,7 @@ module GameObject =
     x |>> fun (o: GameObject) ->
       { o with pos = f o.pos }
 
+
 module Player =
   let inline mapVelocity f x =
     { x with velocity = f x.velocity }
@@ -49,7 +50,11 @@ module Player =
     |> GameObject.mapPos ((+) x.velocity)
     |> clampY setting false
 
+
 module FlyingCat =
+  let inline move (speeds: Speeds) (x: FlyingCat) =
+    x |> GameObject.mapPos((+) <| Vector2.init (-speeds.flyingCatsSpeed) zero)
+
   let inline update setting x =
     x
 
@@ -83,4 +88,13 @@ module Update =
       , Cmd.none
 
     | Hold t ->
-      { model with isHold = t }, Cmd.none
+      { model with
+          isHold = t
+          player =
+            let s = model.Speeds
+            { model.player with
+                velocity =
+                  if t then s.bacuumSpeed else s.fallingSpeed
+                  |> Vector2.init zero
+            }
+      }, Cmd.none

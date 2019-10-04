@@ -25,6 +25,7 @@ type Speeds = {
   static member inline ( .* ) (a: Speeds, b: float32) = b *. a
 
 
+
 type Setting = {
   areaSize: int Vector2
   playerSize: float32 Vector2

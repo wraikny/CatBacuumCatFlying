@@ -224,14 +224,19 @@ module Model =
 
     | SelectMode, SetMode GameMode
     | WaitingMode, SetMode GameMode ->
-      let ps = model.game.imagePaths |> Map.find model.categoryIndex
+      let category = fst model.categories.[model.categoryIndex]
+      let ps = model.game.imagePaths |> Map.find category
       let cmd =
         (monad {
           let! i = Random.int 0 (ps.Length - 1)
           return SetPlayerImage ps.[i]
         }: Random.Generator<_>) |> SideEffect.performWith(GameMsg)
 
-      { model with prevMode = model.mode; mode = GameMode}, cmd
+      { model with
+          prevMode = model.mode
+          mode = GameMode
+          game = { model.game with category = category }
+      }, cmd
 
     | _, SetMode (ErrorMode e as m) ->
       { model with prevMode = model.mode; mode = m}

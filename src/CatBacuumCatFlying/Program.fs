@@ -4,7 +4,7 @@ open Affogato
 
 let setting = {
   requestLimit = 50
-  theCatApiCacheDirectory = "TheCatApiCache"
+  theCatApiCacheDirectory = ".TheCatApiCache"
   gameStartFileCount = 10
 
   errorLogPath = "Log.txt"
@@ -19,6 +19,8 @@ let gameSetting = {
 
   playerX = 200.0f
 
+  playerSizeRate = 0.5f
+
   ceilingHeight = 100.0f
   floorHeight = 800.0f
 
@@ -28,14 +30,14 @@ let gameSetting = {
     flyingCatsSpeed = 8.0f
   }
   diffSpeeds = {
-    bacuumSpeed = 0.2f
-    fallingSpeed = 0.2f
-    flyingCatsSpeed = 0.2f
+    bacuumSpeed = 1.0f
+    fallingSpeed = 1.0f
+    flyingCatsSpeed = 1.2f
   }
 
   hp = 100.0f
 
-  generatePerMin = 30.0f, 2.0f
+  generatePerMin = 30.0f, 5.0f
   generateX = 2100.0f
 
   levelScoreStage = 100u
@@ -49,7 +51,7 @@ let viewSetting = {
 
   menuSetting = {
     frameColor = asd.Color(3, 252, 244, 255)
-    rectColor = asd.Color(115, 3, 252, 255)
+    rectColor = asd.Color(66, 164, 245, 255)
   
     widthRate = 0.8f
   }

@@ -21,6 +21,8 @@ type GameObjectView() =
   let lastSize: float32 Vector2 ref = ref zero
   let lastPath: string ref = ref ""
 
+  let mutable texSize = None
+
   let update x y f =
     if !x <> y then
       x := y
@@ -31,7 +33,9 @@ type GameObjectView() =
     and set(x) =
       textureView.Texture <- x
       if !lastSize <> zero then
-        textureView.Scale <- (Vector2.toVector2DF !lastSize) / x.Size.To2DF()
+        let texSize' = x.Size.To2DF()
+        texSize <- Some texSize'
+        textureView.Scale <- (Vector2.toVector2DF !lastSize) / texSize'
 
   
   member this.Update(x: GameObject) =
@@ -43,8 +47,10 @@ type GameObjectView() =
     update lastSize area.size <| fun x ->
       let size = Vector2.toVector2DF x
       rect.DrawingArea <- asd.RectF(asd.Vector2DF(), size)
-      if textureView.Texture <> null then
-        textureView.Scale <- size / textureView.Texture.Size.To2DF()
+      texSize
+      |> Option.iter(fun x ->
+        textureView.Scale <- size / x
+      )
 
     update lastPath x.imagePath <| fun x ->
       if x <> null && System.IO.File.Exists(x) then

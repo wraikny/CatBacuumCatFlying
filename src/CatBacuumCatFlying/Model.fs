@@ -34,6 +34,7 @@ type GameSetting = {
   flyingCatsSize: float32 Vector2
 
   playerX: float32
+  playerSizeRate: float32
 
   floorHeight: float32
   ceilingHeight: float32

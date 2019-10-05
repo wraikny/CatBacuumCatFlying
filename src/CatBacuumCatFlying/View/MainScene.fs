@@ -42,7 +42,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     Model.Init(setting, gameSetting, apiKey)
 
   let messenger =
-    Messenger.Create({seed = 0}, {
+    Messenger.Create({seed = System.Random().Next()}, {
       init = initModel, Cmd.none
       update = Logic.Model.update
       view = id
@@ -175,16 +175,26 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       )
 
   let scoreObj = new asd.TextObject2D(Font = largeFont)
-
+  let fpsText = new asd.TextObject2D(Font = largeFont)
   do
+    fpsText.AddOnUpdateEvent(fun() ->
+      fpsText.Text <- sprintf "FPS: %d" <| int asd.Engine.CurrentFPS
+      let size = fpsText.Font.HorizontalSize(fpsText.Text)
+      fpsText.Position <-
+        asd.Vector2DF(float32 asd.Engine.WindowSize.X - float32 size.X, fpsText.Position.Y)
+    )
+    
     messenger.ViewModel
       .Add(fun x ->
         if x.mode = GameMode then
           scoreObj.Text <- sprintf " Level = %d, Score = %d" x.game.level x.game.score
+          let size = scoreObj.Font.HorizontalSize(scoreObj.Text)
           scoreObj.Position <-
             asd.Vector2DI(
-              asd.Engine.WindowSize.X - scoreObj.Font.HorizontalSize(scoreObj.Text).X
+              asd.Engine.WindowSize.X - size.X
               , 0).To2DF()
+          fpsText.Position <-
+            asd.Vector2DF(fpsText.Position.X, float32 size.Y)
       )
 
   let longPressArc =
@@ -247,6 +257,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     layer.AddObject(player)
 
     uiLayer.AddObject(scoreObj)
+    uiLayer.AddObject(fpsText)
     uiLayer.AddObject(window)
     longPressArcLayer.AddObject(longPressArc)
 

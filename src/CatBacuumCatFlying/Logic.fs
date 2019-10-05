@@ -45,10 +45,23 @@ module Player =
       x |> setPosY (ceilingHeight)
     else x
 
+  let inline private sizeChange (setting: GameSetting) (x: GameObject) =
+    let minY = setting.ceilingHeight
+    let maxY = setting.floorHeight - setting.playerSize.y
 
-  let inline update setting x =
+    let rate = Easing.calculateF Easing.Linear ((x.pos.y - minY)/(maxY-minY))
+    let scale = setting.playerSizeRate * (1.0f - rate) +  rate
+    let size = setting.playerSize .* scale
+    { x with
+        pos = { x.pos with x = setting.playerX - size.x * 0.5f }
+        size = size
+    }
+
+
+  let inline update setting (x: GameObject) =
     x
     |> GameObject.move
+    |> sizeChange setting
     |> clampY setting false
 
 
@@ -252,7 +265,15 @@ module Model =
       model, Cmd.ofMsg(SetMode SelectMode)
 
     | SelectMode, SetCategories x ->
-      { model with categories = x }, Cmd.ofPort(LoadCatsCache x)
+      { model with
+          categories = x
+          game =
+            { model.game with
+                imagePaths =
+                  seq { for (i, _) in x -> (i, Array.empty)}
+                  |> Map.ofSeq
+            }
+      }, Cmd.ofPort(LoadCatsCache x)
 
     | SelectMode, Release when model.categories.Length > 0 ->
       { model with
@@ -272,13 +293,18 @@ module Model =
             model.setting.requestLimit
 
         let ps = model.game.imagePaths |> Map.find (fst model.categories.[model.categoryIndex])
-        let nextMode =
-          if ps.Length > model.setting.gameStartFileCount then GameMode else WaitingMode
+        
 
-        return (model, Cmd.batch[
-          Cmd.ofPort <| SelectedCategory task
-          Cmd.ofMsg(SetMode nextMode)
-        ])
+        return (model,
+          ( if ps.Length >= model.setting.requestLimit then 
+              Cmd.ofMsg(SetMode GameMode)
+            else
+              Cmd.batch[
+                Cmd.ofPort <| SelectedCategory task
+                Cmd.ofMsg(SetMode WaitingMode)
+              ]
+          )
+        )
       }
       |> Option.defaultValue (model, Cmd.none)
 

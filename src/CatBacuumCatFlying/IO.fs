@@ -63,14 +63,18 @@ let downloadImages apiKey dir (category, categoryName) limit dispatch = async {
     System.IO.Directory.CreateDirectory(dirname) |> ignore
 
   for x in TheCatApi.Parse json do
-    let! stream = downloadImage x.Url
-    
     let filename =
       urlToFilename x.Url
       |> sprintf "%s/%s" dirname
-    saveImageStreamAsPng filename stream
-    printfn "Saved %s" filename
-    dispatch (category, filename)
+
+    if System.IO.File.Exists filename |> not then
+      let! stream = downloadImage x.Url
+    
+      saveImageStreamAsPng filename stream
+      printfn "Saved %s" filename
+      dispatch (category, filename)
+    else
+      printfn "%s has alreadly existed" filename
 }
 
 

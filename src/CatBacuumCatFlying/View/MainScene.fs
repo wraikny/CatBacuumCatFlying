@@ -60,37 +60,75 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     )
 
   let backLayer = new asd.Layer2D()
-  let layer = new asd.Layer2D()
+  let layer = new asd.Layer2D(IsUpdated = false, IsDrawn = false)
   let uiLayer = new asd.Layer2D()
   let longPressArcLayer = new asd.Layer2D()
 
   let player =
     new GameObjectView()
 
+  let hpObj = new asd.GeometryObject2D()
+
   let mutable lastModel = initModel
 
   do
     messenger.OnError.Add(printfn "%A")
-    messenger.Msg.Add(printfn "Msg : %A")
+    //messenger.Msg.Add(printfn "Msg : %A")
     messenger.ViewModel.Add(fun x -> lastModel <- x)
 
-    messenger
-      .ViewModel
+    messenger.ViewModel
       .Where(fun x -> x.mode = GameMode)
       .Select(fun x -> x.game.player)
       .Add((player :> IUpdatee<_>).Update)
 
-    messenger
-      .ViewModel
+    messenger.ViewModel
       .Where(fun x -> x.mode = GameMode)
       .Select(fun x ->
         [ for a in x.game.flyingCats -> (a.Key, a.object) ]
-      ).Subscribe(new ActorsUpdater<_, _, _>(layer, {
+      ).Subscribe(new ActorsUpdater<_, _, _>(layer, true, {
         create = fun() -> new FlyingCatView()
         onError = raise
         onCompleted = ignore
       }))
       |> ignore
+
+    let areaX = float32 gameSetting.areaSize.x
+    let areaY = float32 gameSetting.areaSize.y
+    let areaHeight = areaY - gameSetting.floorHeight
+
+    let hpArea =
+      asd.RectF(
+        areaX * 0.1f,
+        gameSetting.floorHeight + areaHeight * 0.5f,
+        areaX * 0.8f,
+        areaHeight * 0.1f
+      )
+
+    let rect = new asd.RectangleShape(DrawingArea=hpArea)
+
+    let hpBar =
+      new asd.GeometryObject2D(
+        Shape = rect,
+        Color = asd.Color(255, 0, 0, 255)
+    )
+
+    hpObj.Shape <- new asd.RectangleShape(DrawingArea=hpArea)
+
+    messenger.ViewModel
+      .Add(fun x ->
+        if x.mode = GameMode then
+          let rate = x.game.hp / gameSetting.hp
+          let w = areaX * 0.8f * rate
+          rect.DrawingArea <-
+            asd.RectF(
+              hpArea.Position, asd.Vector2DF(w, hpArea.Size.Y)
+            )
+      )
+    hpObj.AddDrawnChildWithoutColor(hpBar)
+
+
+      
+      
 
 
   let createFont size outLineSize =
@@ -128,10 +166,25 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
         if window.IsToggleOn && contents.IsEmpty then
           window.Toggle(false, fun() ->
             layer.IsUpdated <- true
+            layer.IsDrawn <- true
           )
         elif not window.IsToggleOn && not contents.IsEmpty then
           layer.IsUpdated <- false
+          layer.IsDrawn <- false
           window.Toggle(true)
+      )
+
+  let scoreObj = new asd.TextObject2D(Font = largeFont)
+
+  do
+    messenger.ViewModel
+      .Add(fun x ->
+        if x.mode = GameMode then
+          scoreObj.Text <- sprintf " Level = %d, Score = %d" x.game.level x.game.score
+          scoreObj.Position <-
+            asd.Vector2DI(
+              asd.Engine.WindowSize.X - scoreObj.Font.HorizontalSize(scoreObj.Text).X
+              , 0).To2DF()
       )
 
   let longPressArc =
@@ -190,8 +243,10 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     backLayer.AddCamera(gameSetting)
 
     layer.AddCamera(gameSetting)
+    layer.AddObject(hpObj)
     layer.AddObject(player)
 
+    uiLayer.AddObject(scoreObj)
     uiLayer.AddObject(window)
     longPressArcLayer.AddObject(longPressArc)
 
@@ -214,7 +269,9 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
             longPressArc.SetRate(0.0f)
 
         | asd.ButtonState.Hold ->
-          if holdCount <= f + wf && lastModel.mode <> GameMode then
+          lastModel.mode |> function
+          | GameMode | WaitingMode -> ()
+          | _ when holdCount <= f + wf ->
             holdCount <- holdCount + one
 
             if holdCount > wf then
@@ -225,6 +282,8 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
               holdCount <- 0
               longPressArc.SetRate(0.0f)
               messenger.Enqueue(LongPress)
+
+          | _ -> ()
         | _ -> ()
 
         yield()

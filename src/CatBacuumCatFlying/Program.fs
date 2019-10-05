@@ -14,8 +14,8 @@ let setting = {
 
 let gameSetting = {
   areaSize = Vector2.init 1600 900
-  playerSize = Vector2.init 128.0f 256.0f
-  flyingCatsSize = Vector2.init 128.0f 64.0f
+  playerSize = Vector2.init 256.0f 256.0f
+  flyingCatsSize = Vector2.init 128.0f 128.0f
 
   playerX = 200.0f
 
@@ -36,7 +36,7 @@ let gameSetting = {
   hp = 100.0f
 
   generatePerMin = 30.0f, 2.0f
-  generateX = 3000.0f
+  generateX = 2100.0f
 
   levelScoreStage = 100u
   levelFrameStage = 60u * 10u

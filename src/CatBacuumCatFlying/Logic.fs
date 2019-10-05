@@ -66,13 +66,13 @@ open wraikny.Tart.Core
 open wraikny.Tart.Core.Libraries
 
 module GameModel =
-  let inline mapPlayer f (model: GameModel): GameModel =
+  let inline private mapPlayer f (model: GameModel): GameModel =
     { model with player = f model.player }
 
-  let inline mapFlyingCat f (model: GameModel): GameModel =
+  let inline private mapFlyingCat f (model: GameModel): GameModel =
     { model with flyingCats = Array.choose f model.flyingCats }
 
-  let inline calculate (model: GameModel) =
+  let inline private calculate (model: GameModel) =
     let collidedMap =
       seq {
         for x in model.flyingCats do
@@ -90,18 +90,20 @@ module GameModel =
           | Score a -> score <- score + a
           | HP a -> hp <- hp + a
 
-      score + model.score, hp + model.hp
+      score, hp
 
-    printfn "Score: %d, HP: %f" score hp
+    let newScore = model.scoreForLevelStage + score
+    let scoreLebelUp = (model.scoreForLevelStage + score) > model.setting.levelScoreStage
 
     { model with
-        flyingCats = model.flyingCats |> Array.filter (fun x -> HashMap.containsKey x.Key collidedMap)
-        score = score
-        hp = hp
-    } |> ifThen(score % model.setting.levelScoreStage = 0u) GameModel.LevelUp
+        flyingCats = model.flyingCats |> Array.filter (fun x -> not <| HashMap.containsKey x.Key collidedMap)
+        score = score + model.score
+        hp = hp + model.hp |> max zero |> min model.setting.hp
+        scoreForLevelStage = if scoreLebelUp then zero else newScore
+    } |> ifThen(scoreLebelUp) GameModel.LevelUp
 
 
-  let countup (model: GameModel): GameModel =
+  let private countup (model: GameModel): GameModel =
     let count = model.count + one
     { model with
         count = count
@@ -109,18 +111,18 @@ module GameModel =
     } |> ifThen (count % model.setting.levelFrameStage = 0u) GameModel.LevelUp
 
 
-  let addFlyingCatCheck (model: GameModel) =
+  let private addFlyingCatCheck (model: GameModel) =
     if model.generateCount >= model.generatePeriod then
       let stg = model.setting
       { model with generateCount = 0u }, (
         (monad {
           let! p = Random.double01
           let! q = Random.double01
-          let! flag = Random.int 0 3
+          let! flag = Random.int 1 10
           let kind = flag |> function
-            | 0 -> HP (0.2f * stg.hp * float32 p)
-            | 1 -> HP -(0.2f * stg.hp * float32 p)
-            | 2 ->
+            | 0 | 1 -> HP (0.2f * stg.hp * float32 p)
+            | i when 1 < i && i < 9-> HP -(0.2f * stg.hp * float32 p)
+            | 9 | 10 ->
               let p, _ = Utils.boxMullersMethod (float32 p) (float32 q)
               Score (0.5f * p * (float32 stg.levelScoreStage) |> abs |> uint32)
             | x -> failwithf "Unexpected flag %d" x
@@ -152,6 +154,7 @@ module GameModel =
       |> countup
       |> mapPlayer (Player.update stg)
       |> mapFlyingCat (FlyingCat.update)
+      |> calculate
       |> addFlyingCatCheck
 
     | AddFlyingCat x ->

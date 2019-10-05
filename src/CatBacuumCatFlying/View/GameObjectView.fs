@@ -15,7 +15,7 @@ type GameObjectView() =
 
   do
     base.AddDrawnChildWithAll(textureView)
-    base.AddDrawnChildWithoutColor(sizeView)
+    //base.AddDrawnChildWithoutColor(sizeView)
 
   let lastPos: float32 Vector2 ref = ref zero
   let lastSize: float32 Vector2 ref = ref zero
@@ -56,13 +56,6 @@ type GameObjectView() =
 
 type FlyingCatView() =
   inherit GameObjectView()
-
-  let lastKind = ref -1
-
-  let update x y f =
-    if !x <> y then
-      x := y
-      f(y)
 
   interface IUpdatee<FlyingCat> with
     member this.Update(x) =

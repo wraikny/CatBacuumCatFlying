@@ -98,6 +98,8 @@ type GameModel = {
   generatePeriod: uint32
   generateCount: uint32
 
+  scoreForLevelStage: uint32
+
   count: uint32
   hp: float32
   score: uint32
@@ -121,6 +123,8 @@ type GameModel = {
     speeds = setting.initSpeeds
     generatePeriod = uint32 <| 1800.0f / (fst setting.generatePerMin)
     generateCount = 0u
+
+    scoreForLevelStage = 0u
 
     count = 0u
     hp = setting.hp

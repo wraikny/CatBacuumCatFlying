@@ -220,7 +220,7 @@ module Model =
           game = { model.game with imagePaths = newMap }
       }, (
         let ps = newMap |> Map.find (fst model.categories.[model.categoryIndex])
-        if model.mode = WaitingMode && ps.Length > model.setting.gameStartFileCount then
+        if model.mode = WaitingMode then
           Cmd.ofMsg(SetMode GameMode)
         else Cmd.none
       )
@@ -296,7 +296,7 @@ module Model =
         
 
         return (model,
-          ( if ps.Length >= model.setting.requestLimit then 
+          ( if ps.Length >= model.setting.gameStartFileCount then 
               Cmd.ofMsg(SetMode GameMode)
             else
               Cmd.batch[
@@ -320,6 +320,7 @@ module Model =
     | ErrorMode _, LongPress ->
       model, Cmd.ofMsg(SetMode model.prevMode)
 
+    | PauseMode, _
     | TitleMode, _
     | SelectMode, _
     | GameMode, _

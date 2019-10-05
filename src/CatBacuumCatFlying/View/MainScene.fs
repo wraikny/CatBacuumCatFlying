@@ -9,6 +9,8 @@ module Extension =
 type ViewSetting = {
   apiKeyPath: string
 
+  bacuumTexturePath: string
+
   menuSetting: MenuSetting
   fontPath: string
   titleSize: int
@@ -65,9 +67,18 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
   let longPressArcLayer = new asd.Layer2D()
 
   let player =
-    new GameObjectView()
+    new GameObjectView(DrawingPriority = 2)
 
   let hpObj = new asd.GeometryObject2D()
+
+  let bacuumObj =
+    let tex = asd.Engine.Graphics.CreateTexture2D(viewSetting.bacuumTexturePath)
+    new asd.TextureObject2D(
+      Position = asd.Vector2DF(gameSetting.playerX, gameSetting.ceilingHeight),
+      Texture = tex,
+      CenterPosition = tex.Size.To2DF() * 0.5f,
+      DrawingPriority = 3
+    )
 
   let mutable lastModel = initModel
 
@@ -85,8 +96,8 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       .Where(fun x -> x.mode = GameMode)
       .Select(fun x ->
         [ for a in x.game.flyingCats -> (a.Key, a.object) ]
-      ).Subscribe(new ActorsUpdater<_, _, _>(layer, true, {
-        create = fun() -> new FlyingCatView()
+      ).Subscribe(new ActorsUpdater<_, _, _>(layer, {
+        create = fun() -> new FlyingCatView(DrawingPriority = 1)
         onError = raise
         onCompleted = ignore
       }))
@@ -141,7 +152,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
   let textFont = createFont viewSetting.textSize 0
   let largeFont = createFont viewSetting.largeSize 1
 
-  let mouse, window =
+  let _, window =
     Window.create
       (asd.Engine.WindowSize.To2DF().ToVector2())
       viewSetting.menuSetting
@@ -225,7 +236,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       | SelectedCategory f ->
         async {
           try
-            do! f (fun (c, s) -> AddImagePaths(c, [|s|]) |> messenger.Enqueue)
+            do! f (AddImagePaths >> messenger.Enqueue)
             printfn "Finished SelectedCategory"
           with e ->
             printfn "%A" e
@@ -255,6 +266,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     layer.AddCamera(gameSetting)
     layer.AddObject(hpObj)
     layer.AddObject(player)
+    layer.AddObject(bacuumObj)
 
     uiLayer.AddObject(scoreObj)
     uiLayer.AddObject(fpsText)
@@ -266,7 +278,17 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       let wf = viewSetting.longPressFrameWait
       let f = viewSetting.longPressFrame
 
+      let isPush(key) =
+        asd.Engine.Keyboard.GetKeyState key = asd.ButtonState.Push
+
       while true do
+        lastModel.mode |> function
+        | GameMode when isPush(asd.Keys.Escape) ->
+          messenger.Enqueue(SetMode PauseMode)
+        | PauseMode when isPush(asd.Keys.Escape) || isPush(asd.Keys.Space) ->
+          messenger.Enqueue(SetMode GameMode)
+        | _ -> ()
+
         asd.Engine.Keyboard.GetKeyState asd.Keys.Space
         |> function
         | asd.ButtonState.Push ->

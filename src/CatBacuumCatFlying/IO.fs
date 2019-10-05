@@ -45,13 +45,14 @@ let private saveImageStreamAsPng (filename: string) (stream: Stream) =
   use bitmap = new Bitmap(stream)
   if bitmap <> null then
     bitmap.Save(filename, Imaging.ImageFormat.Png)
-  stream.Dispose()
 
 let loadCategoryAsync apiKey = async {
   let! json = getTheCatApiCategoriesAsync apiKey
   return
     [| for x in TheCatApiCategory.Parse json -> (x.Id, x.Name) |]
 }
+
+open System.Collections.Generic
 
 let downloadImages apiKey dir (category, categoryName) limit dispatch = async {
   let! json = getTheCatApiAsync category limit apiKey
@@ -62,19 +63,22 @@ let downloadImages apiKey dir (category, categoryName) limit dispatch = async {
   if System.IO.Directory.Exists dirname |> not then
     System.IO.Directory.CreateDirectory(dirname) |> ignore
 
+  let filenames = List<string>()
+
   for x in TheCatApi.Parse json do
     let filename =
       urlToFilename x.Url
       |> sprintf "%s/%s" dirname
 
     if System.IO.File.Exists filename |> not then
-      let! stream = downloadImage x.Url
+      use! stream = downloadImage x.Url
     
       saveImageStreamAsPng filename stream
       printfn "Saved %s" filename
-      dispatch (category, filename)
+      filenames.Add(filename)
     else
       printfn "%s has alreadly existed" filename
+  dispatch (category, [| for x in filenames -> x |])
 }
 
 

@@ -3,9 +3,9 @@ open System
 open Affogato
 
 let setting = {
-  requestLimit = 50
+  requestLimit = 20
   theCatApiCacheDirectory = ".TheCatApiCache"
-  gameStartFileCount = 10
+  gameStartFileCount = 50
 
   errorLogPath = "Log.txt"
 
@@ -27,12 +27,12 @@ let gameSetting = {
   initSpeeds = {
     bacuumSpeed = 8.0f
     fallingSpeed = 8.0f
-    flyingCatsSpeed = 8.0f
+    flyingCatsSpeed = 10.0f
   }
   diffSpeeds = {
     bacuumSpeed = 1.0f
     fallingSpeed = 1.0f
-    flyingCatsSpeed = 1.2f
+    flyingCatsSpeed = 1.5f
   }
 
   hp = 100.0f
@@ -41,13 +41,15 @@ let gameSetting = {
   generateX = 2100.0f
 
   levelScoreStage = 100u
-  levelFrameStage = 60u * 10u
+  levelFrameStage = 60u * 5u
 }
 
 open Cbcf.View
 
 let viewSetting = {
   apiKeyPath = "apiKey.txt"
+
+  bacuumTexturePath = "robot_soujiki.png"
 
   menuSetting = {
     frameColor = asd.Color(3, 252, 244, 255)

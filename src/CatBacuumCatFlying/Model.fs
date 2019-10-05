@@ -157,6 +157,7 @@ type Mode =
   | SelectMode
   | WaitingMode
   | GameMode
+  | PauseMode
   | ErrorMode of exn
 
 type Setting = {
@@ -213,7 +214,7 @@ with
 
 type Port =
   | LoadCatsCache of (int * string) []
-  | SelectedCategory of (((int * string) -> unit) -> Async<unit>)
+  | SelectedCategory of (((int * string []) -> unit) -> Async<unit>)
   | OutputLog of filepath:string * string
 
 
@@ -234,6 +235,9 @@ module ViewModel =
         Text "by wraikny"
         Line
         Text "スペースボタン長押しでスタート"
+        Line
+        Text "猫: The Cat API, 掃除機: いらすとや"
+        Text "フォント: M+"
       ]
 
     | SelectMode ->
@@ -255,8 +259,7 @@ module ViewModel =
           
           yield! [
             Line
-            Text "スペースボタンで変更"
-            Text "長押しで決定"
+            Text "スペースボタンで変更 / 長押しで決定"
           ]
       ]
     | WaitingMode ->
@@ -265,12 +268,19 @@ module ViewModel =
         Text "しばらくお待ち下さい"
       ]
     | GameMode -> []
-    | ErrorMode e -> [
-      Text <| e.GetType().ToString()
-      Text <| e.Message
-      Line
-      Text "スタッフ/製作者に教えてもらえると嬉しいです"
-      Text (sprintf "ログファイルは'%s'に出力されます" model.setting.errorLogPath)
-      Line
-      Text "長押しで無視して継続"
-    ]
+    | ErrorMode e ->
+      [
+        Text <| e.GetType().ToString()
+        Text <| e.Message
+        Line
+        Text "スタッフ/製作者に教えてもらえると嬉しいです"
+        Text (sprintf "ログファイルは'%s'に出力されます" model.setting.errorLogPath)
+        Line
+        Text "スペースボタン長押しで無視して継続"
+      ]
+
+    | PauseMode ->
+      [
+        Text "ポーズ"
+        Text "スペースボタンかEscボタンで解除"
+      ]

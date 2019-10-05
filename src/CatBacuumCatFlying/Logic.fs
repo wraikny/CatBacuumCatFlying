@@ -127,7 +127,7 @@ module GameModel =
   let private addFlyingCatCheck (model: GameModel) =
     if model.generateCount >= model.generatePeriod then
       let stg = model.setting
-      { model with generateCount = 0u }, (
+      { model with generateCount = zero; nextId = model.nextId + one }, (
         (monad {
           let! p = Random.double01
           let! q = Random.double01
@@ -150,7 +150,7 @@ module GameModel =
 
           return {
             kind = kind
-            object = GameObject.Init(pos, size, Vector2.init -model.speeds.flyingCatsSpeed 0.0f, currentPaths.[imageIndex])
+            object = GameObject.Init(model.nextId, pos, size, Vector2.init -model.speeds.flyingCatsSpeed 0.0f, currentPaths.[imageIndex])
           }
         }: Random.Generator<_>)
         |> SideEffect.performWith Msg.AddFlyingCat

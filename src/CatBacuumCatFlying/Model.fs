@@ -56,7 +56,7 @@ type GameSetting = {
 
 
 type GameObject = {
-  key: obj
+  key: uint16
   size: float32 Vector2
   pos: float32 Vector2
   velocity: float32 Vector2
@@ -67,15 +67,15 @@ type GameObject = {
 
   member inline o.object = o
 
-  static member inline Init (pos, size, velocity, imagePath) = {
-    key = System.Object()
+  static member inline Init (key, pos, size, velocity, imagePath) = {
+    key = key
     size = size
     pos = pos
     velocity = velocity
     imagePath = imagePath
   }
 
-  static member inline Init(pos, size) = GameObject.Init(pos, size, zero, "")
+  static member inline Init(key, pos, size) = GameObject.Init(key, pos, size, zero, "")
 
   static member inline Map(x: GameObject, f) = f x
 
@@ -107,7 +107,7 @@ type GameModel = {
   level: int
   isHold: bool
 
-  //nextId: uint32
+  nextId: uint16
 
   player: GameObject
   flyingCats: FlyingCat []
@@ -123,19 +123,19 @@ type GameModel = {
     setting = setting
     speeds = setting.initSpeeds
     generatePeriod = uint32 <| 1800.0f / (fst setting.generatePerMin)
-    generateCount = 0u
+    generateCount = zero
 
-    scoreForLevelStage = 0u
+    scoreForLevelStage = zero
 
-    count = 0u
+    count = zero
     hp = setting.hp
-    score = 0u
-    level = 1
+    score = zero
+    level = one
     isHold = false
 
-    //nextId = 0u
+    nextId = zero
 
-    player = GameObject.Init(setting.PlayerInitPosition, setting.playerSize)
+    player = GameObject.Init(zero, setting.PlayerInitPosition, setting.playerSize)
     flyingCats = Array.empty
 
     imagePaths = Map.empty

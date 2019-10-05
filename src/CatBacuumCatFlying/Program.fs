@@ -57,15 +57,19 @@ let viewSetting = {
   fontPath = "mplus-1c-regular.ttf"
 
   titleSize = 40
-  headerSize = 30
+  headerSize = 35
+  largeSize = 30
   textSize = 20
   lineWidth = 5.0f
 
-  longPressFrame = 180
+  longPressFrame = 90
+  longPressFrameWait = 30
 }
 
 [<STAThread; EntryPoint>]
 let main _ =
+  
+
   asd.Engine.Initialize(setting.title, 800, 450, asd.EngineOption())
   |> ignore
 

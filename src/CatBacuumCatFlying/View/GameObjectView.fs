@@ -14,11 +14,12 @@ type GameObjectView() =
   let sizeView = new asd.GeometryObject2D(Shape = rect, Color = asd.Color(0, 250, 0, 50))
 
   do
-    base.AddDrawnChildWithoutColor(textureView)
+    base.AddDrawnChildWithAll(textureView)
     base.AddDrawnChildWithoutColor(sizeView)
 
   let lastPos: float32 Vector2 ref = ref zero
   let lastSize: float32 Vector2 ref = ref zero
+  let lastPath: string ref = ref ""
 
   let update x y f =
     if !x <> y then
@@ -45,11 +46,15 @@ type GameObjectView() =
       if textureView.Texture <> null then
         textureView.Scale <- size / textureView.Texture.Size.To2DF()
 
+    update lastPath x.imagePath <| fun x ->
+      if x <> null && System.IO.File.Exists(x) then
+        this.Texture <- asd.Engine.Graphics.CreateTexture2D(x)
+
   interface IUpdatee<GameObject> with
     member this.Update(x) = this.Update(x)
 
 
-type FlyingCatView(healTex, damageTex, scoreTex) =
+type FlyingCatView() =
   inherit GameObjectView()
 
   let lastKind = ref -1
@@ -63,10 +68,8 @@ type FlyingCatView(healTex, damageTex, scoreTex) =
     member this.Update(x) =
       base.Update(x.object)
 
-      let flag, tex = x.kind |> function
-        | HP x when x > 0.0f -> 0, healTex
-        | HP _ -> 1, damageTex
-        | Score _ -> 2, scoreTex
-
-      update lastKind flag <| fun _ ->
-        this.Texture <- tex
+      let color = x.kind |> function
+        | HP x when x > 0.0f -> asd.Color(0, 255, 0, 255)
+        | HP _ -> asd.Color(255, 0, 0, 255)
+        | Score _ -> asd.Color(0, 0, 255, 255)
+      this.Color <- color

@@ -13,9 +13,11 @@ type ViewSetting = {
   fontPath: string
   titleSize: int
   headerSize: int
+  largeSize: int
   textSize: int
   lineWidth: float32
 
+  longPressFrameWait: int
   longPressFrame: int
 }
 
@@ -60,6 +62,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
   let backLayer = new asd.Layer2D()
   let layer = new asd.Layer2D()
   let uiLayer = new asd.Layer2D()
+  let longPressArcLayer = new asd.Layer2D()
 
   let player =
     new GameObjectView()
@@ -67,7 +70,8 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
   let mutable lastModel = initModel
 
   do
-    messenger.Msg.Add(printfn "%A")
+    messenger.OnError.Add(printfn "%A")
+    messenger.Msg.Add(printfn "Msg : %A")
     messenger.ViewModel.Add(fun x -> lastModel <- x)
 
     messenger
@@ -82,21 +86,22 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       .Select(fun x ->
         [ for a in x.game.flyingCats -> (a.Key, a.object) ]
       ).Subscribe(new ActorsUpdater<_, _, _>(layer, {
-        create = fun() -> new GameObjectView()
+        create = fun() -> new FlyingCatView()
         onError = raise
         onCompleted = ignore
       }))
       |> ignore
 
 
-  let createFont size =
+  let createFont size outLineSize =
     asd.Engine.Graphics.CreateDynamicFont(
-      viewSetting.fontPath, size, asd.Color(0, 0, 0, 255), 0, asd.Color()
+      viewSetting.fontPath, size, asd.Color(0, 0, 0, 255), outLineSize, asd.Color(0, 0, 0, 255)
     )
 
-  let titleFont = createFont viewSetting.titleSize
-  let headerFont = createFont viewSetting.headerSize
-  let textFont = createFont viewSetting.textSize
+  let titleFont = createFont viewSetting.titleSize 0
+  let headerFont = createFont viewSetting.headerSize 0
+  let textFont = createFont viewSetting.textSize 0
+  let largeFont = createFont viewSetting.largeSize 1
 
   let mouse, window =
     Window.create
@@ -114,6 +119,8 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
               UI.TextWith(s, titleFont)
             | Header s ->
               UI.TextWith(s, headerFont)
+            | Large s ->
+              UI.TextWith(s, largeFont)
             | Text s -> UI.Text s
             | Line -> UI.Rect(viewSetting.lineWidth, 0.8f)
           )
@@ -127,7 +134,49 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
           window.Toggle(true)
       )
 
+  let longPressArc =
+    let ws = asd.Engine.WindowSize.To2DF()
+    let m = 0.5f * min ws.X ws.Y
+    new LongPressCircle(m * 0.6f, m * 0.8f)
 
+  do
+    let logfileLock = System.Object()
+    messenger.ViewMsg.Add(fun x ->
+      printfn "Port: %A" x
+      x |>function
+      | LoadCatsCache categories ->
+        async {
+          try
+            for (c, s) in categories do
+              let path = sprintf "%s/%s" setting.theCatApiCacheDirectory s
+              if System.IO.Directory.Exists(path) then
+                System.IO.Directory.GetFiles(path)
+                |> fun x -> AddImagePaths(c, x) |> messenger.Enqueue
+              else
+                System.IO.Directory.CreateDirectory(path)
+                |> ignore
+            printfn "Finished LoadCatsCache"
+           with e ->
+            printfn "%A" e
+        } |> Async.Start
+      | SelectedCategory f ->
+        async {
+          try
+            do! f (fun (c, s) -> AddImagePaths(c, [|s|]) |> messenger.Enqueue)
+            printfn "Finished SelectedCategory"
+          with e ->
+            printfn "%A" e
+        } |> Async.Start
+      | OutputLog (filepath, t) ->
+        async {
+          try
+            lock logfileLock <| fun _ ->
+              System.IO.File.AppendAllText(filepath, t)
+            printfn "Finished OutputLog"
+          with e ->
+            printfn "%A" e
+        } |> Async.Start
+    )
 
   override this.OnRegistered() =
     messenger.StartAsync()
@@ -135,6 +184,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     this.AddLayer(backLayer)
     this.AddLayer(layer)
     this.AddLayer(uiLayer)
+    this.AddLayer(longPressArcLayer)
 
     backLayer.AddObject(background)
     backLayer.AddCamera(gameSetting)
@@ -143,22 +193,38 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     layer.AddObject(player)
 
     uiLayer.AddObject(window)
+    longPressArcLayer.AddObject(longPressArc)
 
     this.AddCoroutine(seq {
       let mutable holdCount = 0
+      let wf = viewSetting.longPressFrameWait
+      let f = viewSetting.longPressFrame
+
       while true do
         asd.Engine.Keyboard.GetKeyState asd.Keys.Space
         |> function
         | asd.ButtonState.Push ->
           messenger.Enqueue(Push)
+
         | asd.ButtonState.Release ->
-          messenger.Enqueue(Release)
-          holdCount <- 0
-        | asd.ButtonState.Hold ->
-          holdCount <- holdCount + one
-          if holdCount > viewSetting.longPressFrame then
+          if holdCount <= wf then
+            messenger.Enqueue(Release)
+          else
             holdCount <- 0
-            messenger.Enqueue(LongPress)
+            longPressArc.SetRate(0.0f)
+
+        | asd.ButtonState.Hold ->
+          if holdCount <= f + wf && lastModel.mode <> GameMode then
+            holdCount <- holdCount + one
+
+            if holdCount > wf then
+              longPressArc.SetRate(
+                float32 (holdCount - wf) / float32 f
+              )
+            if holdCount > f + wf then
+              holdCount <- 0
+              longPressArc.SetRate(0.0f)
+              messenger.Enqueue(LongPress)
         | _ -> ()
 
         yield()

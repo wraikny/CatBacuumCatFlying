@@ -13,26 +13,17 @@ let private getTheCatApiCategoriesAsync apiKey =
       headers = [ "Accept", "application/json" ]
     )
 
-let private getTheCatApiAsync (categoryIds: seq<int>) (limit: int) apiKey =
+let private getTheCatApiAsync (categoryId: int) (limit: int) apiKey =
   let url = "https://api.thecatapi.com/v1/images/search"
-
-  let categories =
-    categoryIds
-    |> Seq.map(fun x -> x.ToString())
-    |> String.concat ","
-    |> sprintf "[%s]"
   
   Http.AsyncRequestString
     (
       url, httpMethod = "GET",
       query = [
-        yield! [|
         "api_key", apiKey
         "format", "json"
         "limit", limit.ToString()
-        |]
-        if Seq.isEmpty categoryIds |> not then
-          yield "category_ids", categories
+        "category_ids", categoryId.ToString()
       ],
       headers = [ "Accept", "application/json" ]
     )
@@ -63,21 +54,17 @@ let loadCategoryAsync apiKey = async {
 }
 
 let downloadImages apiKey dir (category, categoryName) limit dispatch = async {
-  let! json = getTheCatApiAsync [|category|] limit apiKey
+  let! json = getTheCatApiAsync category limit apiKey
+  printfn "Json:\n%s" json
   
-  let! streams =
-    TheCatApi.Parse json
-    |> Array.map(fun x -> async{
-      let! stream = downloadImage x.Url
-      return (x.Url, stream)
-    })
-    |> Async.Parallel
+  for x in TheCatApi.Parse json do
+    let! stream = downloadImage x.Url
   
-  for (url, s) in streams do
     let filename =
-      urlToFilename url
+      urlToFilename x.Url
       |> sprintf "%s/%s/%s" dir categoryName
-    saveImageStreamAsPng filename s
+    saveImageStreamAsPng filename stream
+    printfn "Saved %s" filename
     dispatch (category, filename)
 }
 

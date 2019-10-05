@@ -128,11 +128,14 @@ module GameModel =
           let size = stg.flyingCatsSize
           let! posY = Random.float (float stg.ceilingHeight) (float <| stg.floorHeight - size.y)
 
+          let currentPaths = model.imagePaths |> Map.find model.category
+          let! imageIndex = Random.int 0 currentPaths.Length
+
           let pos = Vector2.init stg.generateX (float32 posY)
 
           return {
             kind = kind
-            object = GameObject.Init(pos, size, Vector2.init -model.speeds.flyingCatsSpeed 0.0f)
+            object = GameObject.Init(pos, size, Vector2.init -model.speeds.flyingCatsSpeed 0.0f, currentPaths.[imageIndex])
           }
         }: Random.Generator<_>)
         |> SideEffect.performWith Msg.AddFlyingCat
@@ -156,6 +159,10 @@ module GameModel =
       { model with
           flyingCats = Array.append model.flyingCats [|x|]
       }, Cmd.none
+
+    | SetPlayerImage s ->
+      model
+      |> mapPlayer(fun p -> { p with imagePath = s }), Cmd.none
 
 
   let push model =
@@ -196,7 +203,8 @@ module Model =
       { model with
           game = { model.game with imagePaths = newMap }
       }, (
-        if model.mode = WaitingMode && xs.Length > model.setting.gameStartFileCount then
+        let ps = newMap |> Map.find (fst model.categories.[model.categoryIndex])
+        if model.mode = WaitingMode && ps.Length > model.setting.gameStartFileCount then
           Cmd.ofMsg(SetMode GameMode)
         else Cmd.none
       )
@@ -214,6 +222,17 @@ module Model =
             SetMode(ErrorMode e)
         )
 
+    | SelectMode, SetMode GameMode
+    | WaitingMode, SetMode GameMode ->
+      let ps = model.game.imagePaths |> Map.find model.categoryIndex
+      let cmd =
+        (monad {
+          let! i = Random.int 0 (ps.Length - 1)
+          return SetPlayerImage ps.[i]
+        }: Random.Generator<_>) |> SideEffect.performWith(GameMsg)
+
+      { model with prevMode = model.mode; mode = GameMode}, cmd
+
     | _, SetMode (ErrorMode e as m) ->
       { model with prevMode = model.mode; mode = m}
       , Cmd.ofPort <| OutputLog(model.setting.errorLogPath, e.ToString())
@@ -227,17 +246,15 @@ module Model =
     | SelectMode, SetCategories x ->
       { model with categories = x }, Cmd.ofPort(LoadCatsCache x)
 
-    | SelectMode, Push when model.categories.Length > 0 ->
+    | SelectMode, Release when model.categories.Length > 0 ->
       { model with
           categoryIndex =
-            model.categoryIndex
-            |>> fun x -> (x + one) % model.categories.Length
+            (model.categoryIndex + one) % model.categories.Length
       }, Cmd.none
 
     | SelectMode, LongPress when model.categories.Length > 0 ->
       monad {
-        let! index = model.categoryIndex
-        let! category = model.categories |> Array.tryItem index
+        let! category = model.categories |> Array.tryItem model.categoryIndex
 
         let task =
           IO.downloadImages
@@ -246,7 +263,14 @@ module Model =
             category
             model.setting.requestLimit
 
-        return ({ model with mode = WaitingMode }, Cmd.ofPort <| SelectedCategory task)
+        let ps = model.game.imagePaths |> Map.find (fst model.categories.[model.categoryIndex])
+        let nextMode =
+          if ps.Length > model.setting.gameStartFileCount then GameMode else WaitingMode
+
+        return (model, Cmd.batch[
+          Cmd.ofPort <| SelectedCategory task
+          Cmd.ofMsg(SetMode nextMode)
+        ])
       }
       |> Option.defaultValue (model, Cmd.none)
 

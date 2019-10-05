@@ -59,20 +59,22 @@ type GameObject = {
   size: float32 Vector2
   pos: float32 Vector2
   velocity: float32 Vector2
+  imagePath: string
 } with
   member inline o.Area = Rectangle.init o.pos o.size
   member inline o.Foot = { o.pos with x = o.pos.x + o.size.x * 0.5f }
 
   member inline o.object = o
 
-  static member inline Init (pos, size, velocity) = {
+  static member inline Init (pos, size, velocity, imagePath) = {
     key = System.Object()
     size = size
     pos = pos
     velocity = velocity
+    imagePath = imagePath
   }
 
-  static member inline Init(pos, size) = GameObject.Init(pos, size, zero)
+  static member inline Init(pos, size) = GameObject.Init(pos, size, zero, "")
 
   static member inline Map(x: GameObject, f) = f x
 
@@ -168,7 +170,7 @@ type Model = {
 
   apiKey: string
   categories: (int * string) []
-  categoryIndex: int option
+  categoryIndex: int
 
 } with
   static member inline Init(setting, gameSetting, apiKey) = {
@@ -178,7 +180,7 @@ type Model = {
     game = GameModel.Init(gameSetting)
     apiKey = apiKey
     categories = Array.empty
-    categoryIndex = None
+    categoryIndex = 0
   }
 
   static member inline Set(model, x) =
@@ -188,6 +190,7 @@ type Model = {
 type GameMsg =
   | AddFlyingCat of FlyingCat
   | Tick
+  | SetPlayerImage of string
 
 
 type Msg =
@@ -207,7 +210,6 @@ type Port =
   | LoadCatsCache of (int * string) []
   | SelectedCategory of (((int * string) -> unit) -> Async<unit>)
   | OutputLog of filepath:string * string
-  | Close
 
 
 module ViewModel =
@@ -215,6 +217,7 @@ module ViewModel =
     | Title of string
     | Header of string
     | Text of string
+    | Large of string
     | Line
 
 
@@ -231,12 +234,22 @@ module ViewModel =
     | SelectMode ->
       [
         yield Header "モードセレクト"
+        yield Line
         if model.categories.Length = 0 then
           yield Text "データをダウンロード中..."
           yield Text "セキュリティソフトによって処理が一時停止する場合があります"
         else
-          yield! model.categories |>> (snd >> Text)
+          let len = model.categories.Length
+          let createItem i =
+             model.categories.[(model.categoryIndex + i + len) % len]
+             |> snd
+
+          yield Text <| createItem -1
+          yield Large <| createItem 0
+          yield Text <| createItem 1
+          
           yield! [
+            Line
             Text "スペースボタンで変更"
             Text "長押しで決定"
           ]

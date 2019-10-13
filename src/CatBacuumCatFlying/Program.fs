@@ -75,8 +75,9 @@ open System.Threading
 
 [<STAThread; EntryPoint>]
 let main _ =
+  let sc = QueueSynchronizationContext()
+  SynchronizationContext.SetSynchronizationContext(sc)
   
-
   asd.Engine.Initialize(setting.title, 800, 450, asd.EngineOption())
   |> ignore
 
@@ -85,9 +86,6 @@ let main _ =
   #endif
 
   asd.Engine.ChangeScene(new MainScene(setting, gameSetting, viewSetting))
-
-  let sc = QueueSynchronizationContext()
-  SynchronizationContext.SetSynchronizationContext(sc)
 
   while asd.Engine.DoEvents() do
     sc.Execute()

@@ -27,7 +27,7 @@ type ViewSetting = {
 open Affogato
 open Affogato.Helper
 open wraikny.MilleFeuille
-open wraikny.MilleFeuille.Objects
+open wraikny.MilleFeuille.Updater
 open System.Reactive
 open System.Reactive.Linq
 open System.Threading
@@ -39,35 +39,24 @@ open Elmish
 type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSetting) =
   inherit Scene()
 
-  let notifier = new Subjects.Subject<_>()
+  //let notifier = new Subjects.Subject<_>()
 
-  let mutable dispatch = Unchecked.defaultof<_>
-  let mutable lastModel = Unchecked.defaultof<_>
-  let startProgram =
+  //let mutable dispatch = Unchecked.defaultof<_>
+  //let mutable lastModel = Unchecked.defaultof<_>
+  let messenger =
     let apiKey = (IO.Altseed.loadString viewSetting.apiKeyPath).Trim()
 
-    let program =
-      Program.mkProgram Logic.Model.init Logic.Model.update (fun m _ -> m)
-      |> Program.withSubscription(fun model ->
-        lastModel <- model
-        [ fun x -> dispatch <- x ]
-      )
-      |> Program.withSetState(fun model dispatch ->
-        lastModel <- model
-        notifier.OnNext(model, dispatch)
-      )
-      |> Program.withErrorHandler(printfn "%A")
-      #if DEBUG
-      |> Program.withTrace(fun msg _ ->
-        if msg <> Msg.Tick then
-          printfn "%A" msg
-      )
-      #endif
+    let init() = Logic.Model.init(setting, gameSetting, apiKey)
 
-    (fun () ->
-      program
-      |> Program.runWith(setting, gameSetting, apiKey)
+    Program.mkProgram init Logic.Model.update (fun m _ -> m)
+    |> Program.withErrorHandler(printfn "%A")
+    #if DEBUG
+    |> Program.withTrace(fun msg _ ->
+      if msg <> Msg.Tick then
+        printfn "%A" msg
     )
+    #endif
+    |> Messenger.create
 
 
   let background =
@@ -103,21 +92,17 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
   //let mutable lastModel = initModel
 
   do
-    notifier
-      .Add(fun (x, _) ->
+    messenger.View
+      .Add(fun x ->
         if x.mode = GameMode then
           (player :> IUpdatee<_>).Update(x.game.player)
       )
 
-    notifier
-      .Where(fun (x, _) -> x.mode = GameMode)
-      .Select(fun (x, _) ->
+    messenger.View
+      .Where(fun x -> x.mode = GameMode)
+      .Select(fun x ->
         [ for a in x.game.flyingCats -> (a.Key, a.object) ]
-      ).Subscribe(new ActorsUpdater<_, _, _>(layer, {
-        create = fun() -> new FlyingCatView(DrawingPriority = 1)
-        onError = raise
-        onCompleted = ignore
-      }))
+      ).Subscribe(new ActorsUpdater<_, _, _>(layer, fun() -> new FlyingCatView(DrawingPriority = 1)))
       |> ignore
 
     let areaX = float32 gameSetting.areaSize.x
@@ -142,8 +127,8 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
 
     hpObj.Shape <- new asd.RectangleShape(DrawingArea=hpArea)
 
-    notifier
-      .Add(fun (x,_) ->
+    messenger.View
+      .Add(fun x ->
         if x.mode = GameMode then
           let rate = x.game.hp / gameSetting.hp
           let w = areaX * 0.8f * rate
@@ -176,8 +161,8 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       textFont
 
   do
-    notifier
-      .Select(fst >> view)
+    messenger.View
+      .Select(view)
       .Add(fun contents ->
         window.UIContents <-
           contents |> List.map(function
@@ -212,8 +197,8 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
         asd.Vector2DF(float32 asd.Engine.WindowSize.X - float32 size.X, fpsText.Position.Y)
     )
     
-    notifier
-      .Add(fun (x,_) ->
+    messenger.View
+      .Add(fun x ->
         if x.mode = GameMode then
           scoreObj.Text <- sprintf " Level = %d, Score = %d" x.game.level x.game.score
           let size = scoreObj.Font.HorizontalSize(scoreObj.Text)
@@ -230,8 +215,10 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     let m = 0.5f * min ws.X ws.Y
     new LongPressCircle(m * 0.6f, m * 0.8f)
 
+  do
+    messenger.Start()
+
   override this.OnRegistered() =
-    startProgram()
 
     this.AddLayer(backLayer)
     this.AddLayer(layer)
@@ -260,27 +247,28 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
         asd.Engine.Keyboard.GetKeyState key = asd.ButtonState.Push
 
       while true do
-        lastModel.mode |> function
+        messenger.LastModel.mode |> function
         | GameMode when isPush(asd.Keys.Escape) ->
-          dispatch(SetMode PauseMode)
+          messenger.Enqueue(SetMode PauseMode)
         | PauseMode when isPush(asd.Keys.Escape) || isPush(asd.Keys.Space) ->
-          dispatch(SetMode GameMode)
+          messenger.Enqueue(SetMode GameMode)
         | _ -> ()
 
         asd.Engine.Keyboard.GetKeyState asd.Keys.Space
         |> function
         | asd.ButtonState.Push ->
-          dispatch(Push)
+          messenger.Enqueue(Push)
 
         | asd.ButtonState.Release ->
           if holdCount <= wf then
-            dispatch(Release)
+            messenger.Enqueue(Release)
           else
-            holdCount <- 0
             longPressArc.SetRate(0.0f)
 
+          holdCount <- 0
+
         | asd.ButtonState.Hold ->
-          lastModel.mode |> function
+          messenger.LastModel.mode |> function
           | GameMode | WaitingMode -> ()
           | _ when holdCount <= f + wf ->
             holdCount <- holdCount + one
@@ -292,7 +280,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
             if holdCount > f + wf then
               holdCount <- 0
               longPressArc.SetRate(0.0f)
-              dispatch(LongPress)
+              messenger.Enqueue(LongPress)
 
           | _ -> ()
         | _ -> ()
@@ -302,7 +290,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
 
 
   override this.OnUpdated() =
-    if lastModel.mode = GameMode then
-      dispatch(Msg.Tick)
+    if messenger.LastModel.mode = GameMode then
+      messenger.Enqueue(Msg.Tick)
     
     //messenger.NotifyView()

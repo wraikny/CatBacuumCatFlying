@@ -1,7 +1,7 @@
 ﻿namespace Cbcf.View
 
 open wraikny.MilleFeuille
-open wraikny.MilleFeuille.Objects
+open wraikny.MilleFeuille.Updater
 open Affogato
 open Affogato.Helper
 open Cbcf

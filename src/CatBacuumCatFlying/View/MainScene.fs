@@ -154,7 +154,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
 
   let _, window =
     Window.create
-      (asd.Engine.WindowSize.To2DF().ToVector2())
+      (asd.Engine.WindowSize.ToVector2F())
       viewSetting.menuSetting
       textFont
 
@@ -273,7 +273,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     uiLayer.AddObject(window)
     longPressArcLayer.AddObject(longPressArc)
 
-    this.AddCoroutine(seq {
+    this.AddCoroutineAsParallel(seq {
       let mutable holdCount = 0
       let wf = viewSetting.longPressFrameWait
       let f = viewSetting.longPressFrame

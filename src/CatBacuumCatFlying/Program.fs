@@ -70,6 +70,9 @@ let viewSetting = {
   longPressFrameWait = 30
 }
 
+open wraikny.MilleFeuille
+open System.Threading
+
 [<STAThread; EntryPoint>]
 let main _ =
   
@@ -83,7 +86,12 @@ let main _ =
 
   asd.Engine.ChangeScene(new MainScene(setting, gameSetting, viewSetting))
 
-  while asd.Engine.DoEvents() do asd.Engine.Update()
+  let sc = QueueSynchronizationContext()
+  SynchronizationContext.SetSynchronizationContext(sc)
+
+  while asd.Engine.DoEvents() do
+    sc.Execute()
+    asd.Engine.Update()
 
   asd.Engine.Terminate()
 

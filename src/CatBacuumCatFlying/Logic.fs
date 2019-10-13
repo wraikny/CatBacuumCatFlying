@@ -6,6 +6,9 @@ open Affogato.Helper
 open Affogato.Collections
 open FSharpPlus
 
+module Random =
+  let rand = System.Random()
+
 module GameObject =
   let inline get (x: ^a): GameObject =
     (^a: (member object:_) x)
@@ -75,8 +78,7 @@ module FlyingCat =
     |> outOfArea
 
 
-open wraikny.Tart.Core
-open wraikny.Tart.Core.Libraries
+open Elmish
 
 module GameModel =
   let inline private mapPlayer f (model: GameModel): GameModel =
@@ -128,32 +130,33 @@ module GameModel =
     if model.generateCount >= model.generatePeriod then
       let stg = model.setting
       { model with generateCount = zero; nextId = model.nextId + one }, (
-        (monad {
-          let! p = Random.double01
-          let! q = Random.double01
-          let! flag = Random.int 1 10
-          let kind = flag |> function
-            | 0 | 1 -> HP (0.2f * stg.hp * float32 p)
-            | i when 1 < i && i < 9-> HP -(0.2f * stg.hp * float32 p)
-            | 9 | 10 ->
-              let p, _ = Utils.boxMullersMethod (float32 p) (float32 q)
-              Score (0.5f * p * (float32 stg.levelScoreStage) |> abs |> uint32)
-            | x -> failwithf "Unexpected flag %d" x
+        let p = Random.rand.NextDouble()
+        let q = Random.rand.NextDouble()
+        let flag = Random.rand.Next(1, 10)
+        let kind = flag |> function
+          | 0 | 1 -> HP (0.2f * stg.hp * float32 p)
+          | i when 1 < i && i < 9-> HP -(0.2f * stg.hp * float32 p)
+          | 9 | 10 ->
+            let p, _ = Utils.boxMullersMethod (float32 p) (float32 q)
+            Score (0.5f * p * (float32 stg.levelScoreStage) |> abs |> uint32)
+          | x -> failwithf "Unexpected flag %d" x
 
-          let size = stg.flyingCatsSize
-          let! posY = Random.float (float stg.ceilingHeight) (float <| stg.floorHeight - size.y)
+        let size = stg.flyingCatsSize
+        let posY =
+          let a = stg.ceilingHeight
+          let b = stg.floorHeight - size.y
+          (float32 <| Random.rand.NextDouble()) * (b - a) + a
 
-          let currentPaths = model.imagePaths |> Map.find model.category
-          let! imageIndex = Random.int 0 currentPaths.Length
+        let currentPaths = model.imagePaths |> Map.find model.category
+        let imageIndex = Random.rand.Next(0, currentPaths.Length)
 
-          let pos = Vector2.init stg.generateX (float32 posY)
+        let pos = Vector2.init stg.generateX (float32 posY)
 
-          return {
-            kind = kind
-            object = GameObject.Init(model.nextId, pos, size, Vector2.init -model.speeds.flyingCatsSpeed 0.0f, currentPaths.[imageIndex])
-          }
-        }: Random.Generator<_>)
-        |> SideEffect.performWith Msg.AddFlyingCat
+        Msg.AddFlyingCat {
+          kind = kind
+          object = GameObject.Init(model.nextId, pos, size, Vector2.init -model.speeds.flyingCatsSpeed 0.0f, currentPaths.[imageIndex])
+        }
+        |> Cmd.ofMsg
       )
     else
       model, Cmd.none
@@ -199,11 +202,65 @@ module GameModel =
           }
     }, Cmd.none
 
+open System.Threading
+open System.Collections.Generic
 
 module Model =
   let inline chain f m =
     let g, c = f m.game
     set g m, c
+
+  let inline init arg =
+    Model.Init arg, Cmd.none
+
+  let loadCatsCache (setting: Setting) (categories: _ []) dispatch =
+    async {
+      try
+        let ctx = SynchronizationContext.Current
+        do! Async.SwitchToThreadPool()
+
+        let msgs = List<_>(categories.Length)
+        for (c, s) in categories do
+          let path = sprintf "%s/%s" setting.theCatApiCacheDirectory s
+
+          if System.IO.Directory.Exists(path) then
+            System.IO.Directory.GetFiles(path)
+            |> fun x -> AddImagePaths(c, x)
+            |> msgs.Add
+
+          else
+            System.IO.Directory.CreateDirectory(path)
+            |> ignore
+
+        do! Async.SwitchToContext(ctx)
+        msgs |> iter(dispatch)
+
+        printfn "Finished LoadCatsCache"
+       with e ->
+        printfn "%A" e
+    }
+
+  //let selectedCategory f dispatch =
+  //  async {
+  //    try
+  //      do! f (AddImagePaths >> dispatch)
+  //      printfn "finished selectedcategory"
+  //    with e ->
+  //      printfn "%A" e
+  //  }
+
+  let logfileLock = System.Object()
+
+  let outputLog filepath t =
+    async {
+      try
+        lock logfileLock <| fun _ ->
+          System.IO.File.AppendAllText(filepath, t)
+        printfn "Finished OutputLog"
+      with e ->
+        printfn "%A" e
+    }
+
 
   let update (msg: Msg) (model: Model) =
     (model.mode, msg) |> function
@@ -227,26 +284,29 @@ module Model =
 
     | _, SetMode SelectMode ->
       { model with prevMode = model.mode; mode = SelectMode }
-      , IO.loadCategoryAsync model.apiKey
-        |> Async.Catch
-        |> SideEffect.performWith(function
+      , async {
+        let! child =
+          IO.loadCategoryAsync model.apiKey
+          |> Async.Catch
+          |> Async.StartChild
+
+        match! child with
           | Choice1Of2 [||] ->
-            SetMode(ErrorMode <| System.Exception("Categories list is empty"))
+            return SetMode(ErrorMode <| System.Exception("Categories list is empty"))
           | Choice1Of2 x ->
-            SetCategories x
+            return SetCategories x
           | Choice2Of2 e ->
-            SetMode(ErrorMode e)
-        )
+            return SetMode(ErrorMode e)
+
+      } |> Cmd.OfAsyncImmediate.result
 
     | SelectMode, SetMode GameMode
     | WaitingMode, SetMode GameMode ->
       let category = fst model.categories.[model.categoryIndex]
       let ps = model.game.imagePaths |> Map.find category
       let cmd =
-        (monad {
-          let! i = Random.int 0 (ps.Length - 1)
-          return SetPlayerImage ps.[i]
-        }: Random.Generator<_>) |> SideEffect.performWith(GameMsg)
+        let i = Random.rand.Next(0, ps.Length - 1)
+        SetPlayerImage ps.[i] |> GameMsg |> Cmd.ofMsg
 
       { model with
           prevMode = model.mode
@@ -255,8 +315,10 @@ module Model =
       }, cmd
 
     | _, SetMode (ErrorMode e as m) ->
-      { model with prevMode = model.mode; mode = m}
-      , Cmd.ofPort <| OutputLog(model.setting.errorLogPath, e.ToString())
+      outputLog (model.setting.errorLogPath) (string e)
+      |> Async.Start
+
+      { model with prevMode = model.mode; mode = m}, Cmd.none
 
     | _, SetMode m ->
       { model with prevMode = model.mode; mode = m }, Cmd.none
@@ -264,16 +326,21 @@ module Model =
     | TitleMode, LongPress ->
       model, Cmd.ofMsg(SetMode SelectMode)
 
-    | SelectMode, SetCategories x ->
+    | SelectMode, SetCategories categories ->
+      //LoadCatsCache x
+      let sub dispatch =
+        loadCatsCache model.setting categories dispatch
+        |> Async.StartImmediate
+
       { model with
-          categories = x
+          categories = categories
           game =
             { model.game with
                 imagePaths =
-                  seq { for (i, _) in x -> (i, Array.empty)}
+                  seq { for (i, _) in categories -> (i, Array.empty)}
                   |> Map.ofSeq
             }
-      }, Cmd.ofPort(LoadCatsCache x)
+      }, Cmd.ofSub sub
 
     | SelectMode, Release when model.categories.Length > 0 ->
       { model with
@@ -285,23 +352,25 @@ module Model =
       monad {
         let! category = model.categories |> Array.tryItem model.categoryIndex
 
-        let task =
-          IO.downloadImages
-            model.apiKey
-            model.setting.theCatApiCacheDirectory
-            category
-            model.setting.requestLimit
-
         let ps = model.game.imagePaths |> Map.find (fst model.categories.[model.categoryIndex])
         
-
         return (model,
           ( if ps.Length >= model.setting.gameStartFileCount then 
               Cmd.ofMsg(SetMode GameMode)
             else
+              
               Cmd.batch[
-                Cmd.ofPort <| SelectedCategory task
                 Cmd.ofMsg(SetMode WaitingMode)
+                Cmd.OfAsyncImmediate.perform(fun() -> async {
+                  let! child =
+                    IO.downloadImages
+                      model.apiKey
+                      model.setting.theCatApiCacheDirectory
+                      category
+                      model.setting.requestLimit
+                    |> Async.StartChild
+                  return! child
+                }) () (AddImagePaths)
               ]
           )
         )

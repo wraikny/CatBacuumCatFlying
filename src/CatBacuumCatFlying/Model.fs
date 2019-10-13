@@ -206,16 +206,18 @@ type Msg =
   | SetCategories of (int * string) []
   | AddImagePaths of category:int * filepath:string []
 
+  | DirectoryNotFound
+
   | Push | Release | LongPress
 with
   static member inline Tick = GameMsg Tick
   static member inline AddFlyingCat x = GameMsg <| AddFlyingCat x
 
 
-type Port =
-  | LoadCatsCache of (int * string) []
-  | SelectedCategory of (((int * string []) -> unit) -> Async<unit>)
-  | OutputLog of filepath:string * string
+//type Port =
+//  | LoadCatsCache of (int * string) []
+//  | SelectedCategory of (((int * string []) -> unit) -> Async<unit>)
+//  | OutputLog of filepath:string * string
 
 
 module ViewModel =

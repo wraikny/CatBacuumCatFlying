@@ -26,29 +26,38 @@ type ViewSetting = {
 
 open Affogato
 open Affogato.Helper
-open wraikny.Tart.Helper
-open wraikny.Tart.Core
 open wraikny.MilleFeuille
-open wraikny.MilleFeuille.Objects
+open wraikny.MilleFeuille.Updater
+open System.Reactive
 open System.Reactive.Linq
-
+open System.Threading
 open Cbcf
 open Cbcf.ViewModel
+open Elmish
 
 
 type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSetting) =
   inherit Scene()
 
-  let initModel =
-    let apiKey = (IO.Altseed.loadString viewSetting.apiKeyPath).Trim()
-    Model.Init(setting, gameSetting, apiKey)
+  //let notifier = new Subjects.Subject<_>()
 
+  //let mutable dispatch = Unchecked.defaultof<_>
+  //let mutable lastModel = Unchecked.defaultof<_>
   let messenger =
-    Messenger.Create({seed = System.Random().Next()}, {
-      init = initModel, Cmd.none
-      update = Logic.Model.update
-      view = id
-    })
+    let apiKey = (IO.Altseed.loadString viewSetting.apiKeyPath).Trim()
+
+    let init() = Logic.Model.init(setting, gameSetting, apiKey)
+
+    Program.mkProgram init Logic.Model.update (fun m _ -> m)
+    |> Program.withErrorHandler(printfn "%A")
+    #if DEBUG
+    |> Program.withTrace(fun msg _ ->
+      if msg <> Msg.Tick then
+        printfn "%A" msg
+    )
+    #endif
+    |> Messenger.create
+
 
   let background =
     let rect =
@@ -80,27 +89,20 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       DrawingPriority = 3
     )
 
-  let mutable lastModel = initModel
+  //let mutable lastModel = initModel
 
   do
-    messenger.OnError.Add(printfn "%A")
-    //messenger.Msg.Add(printfn "Msg : %A")
-    messenger.ViewModel.Add(fun x -> lastModel <- x)
+    messenger.View
+      .Add(fun x ->
+        if x.mode = GameMode then
+          (player :> IUpdatee<_>).Update(x.game.player)
+      )
 
-    messenger.ViewModel
-      .Where(fun x -> x.mode = GameMode)
-      .Select(fun x -> x.game.player)
-      .Add((player :> IUpdatee<_>).Update)
-
-    messenger.ViewModel
+    messenger.View
       .Where(fun x -> x.mode = GameMode)
       .Select(fun x ->
         [ for a in x.game.flyingCats -> (a.Key, a.object) ]
-      ).Subscribe(new ActorsUpdater<_, _, _>(layer, {
-        create = fun() -> new FlyingCatView(DrawingPriority = 1)
-        onError = raise
-        onCompleted = ignore
-      }))
+      ).Subscribe(new ActorsUpdater<_, _, _>(layer, fun() -> new FlyingCatView(DrawingPriority = 1)))
       |> ignore
 
     let areaX = float32 gameSetting.areaSize.x
@@ -125,7 +127,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
 
     hpObj.Shape <- new asd.RectangleShape(DrawingArea=hpArea)
 
-    messenger.ViewModel
+    messenger.View
       .Add(fun x ->
         if x.mode = GameMode then
           let rate = x.game.hp / gameSetting.hp
@@ -154,12 +156,12 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
 
   let _, window =
     Window.create
-      (asd.Engine.WindowSize.To2DF().ToVector2())
+      (asd.Engine.WindowSize.ToVector2F())
       viewSetting.menuSetting
       textFont
 
   do
-    messenger.ViewModel
+    messenger.View
       .Select(view)
       .Add(fun contents ->
         window.UIContents <-
@@ -195,7 +197,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
         asd.Vector2DF(float32 asd.Engine.WindowSize.X - float32 size.X, fpsText.Position.Y)
     )
     
-    messenger.ViewModel
+    messenger.View
       .Add(fun x ->
         if x.mode = GameMode then
           scoreObj.Text <- sprintf " Level = %d, Score = %d" x.game.level x.game.score
@@ -214,46 +216,9 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     new LongPressCircle(m * 0.6f, m * 0.8f)
 
   do
-    let logfileLock = System.Object()
-    messenger.ViewMsg.Add(fun x ->
-      printfn "Port: %A" x
-      x |>function
-      | LoadCatsCache categories ->
-        async {
-          try
-            for (c, s) in categories do
-              let path = sprintf "%s/%s" setting.theCatApiCacheDirectory s
-              if System.IO.Directory.Exists(path) then
-                System.IO.Directory.GetFiles(path)
-                |> fun x -> AddImagePaths(c, x) |> messenger.Enqueue
-              else
-                System.IO.Directory.CreateDirectory(path)
-                |> ignore
-            printfn "Finished LoadCatsCache"
-           with e ->
-            printfn "%A" e
-        } |> Async.Start
-      | SelectedCategory f ->
-        async {
-          try
-            do! f (AddImagePaths >> messenger.Enqueue)
-            printfn "Finished SelectedCategory"
-          with e ->
-            printfn "%A" e
-        } |> Async.Start
-      | OutputLog (filepath, t) ->
-        async {
-          try
-            lock logfileLock <| fun _ ->
-              System.IO.File.AppendAllText(filepath, t)
-            printfn "Finished OutputLog"
-          with e ->
-            printfn "%A" e
-        } |> Async.Start
-    )
+    messenger.Start()
 
   override this.OnRegistered() =
-    messenger.StartAsync()
 
     this.AddLayer(backLayer)
     this.AddLayer(layer)
@@ -273,7 +238,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     uiLayer.AddObject(window)
     longPressArcLayer.AddObject(longPressArc)
 
-    this.AddCoroutine(seq {
+    this.AddCoroutineAsParallel(seq {
       let mutable holdCount = 0
       let wf = viewSetting.longPressFrameWait
       let f = viewSetting.longPressFrame
@@ -282,7 +247,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
         asd.Engine.Keyboard.GetKeyState key = asd.ButtonState.Push
 
       while true do
-        lastModel.mode |> function
+        messenger.LastModel.mode |> function
         | GameMode when isPush(asd.Keys.Escape) ->
           messenger.Enqueue(SetMode PauseMode)
         | PauseMode when isPush(asd.Keys.Escape) || isPush(asd.Keys.Space) ->
@@ -298,11 +263,12 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
           if holdCount <= wf then
             messenger.Enqueue(Release)
           else
-            holdCount <- 0
             longPressArc.SetRate(0.0f)
 
+          holdCount <- 0
+
         | asd.ButtonState.Hold ->
-          lastModel.mode |> function
+          messenger.LastModel.mode |> function
           | GameMode | WaitingMode -> ()
           | _ when holdCount <= f + wf ->
             holdCount <- holdCount + one
@@ -324,7 +290,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
 
 
   override this.OnUpdated() =
-    if lastModel.mode = GameMode then
+    if messenger.LastModel.mode = GameMode then
       messenger.Enqueue(Msg.Tick)
     
-    messenger.NotifyView()
+    //messenger.NotifyView()

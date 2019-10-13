@@ -1,9 +1,9 @@
 ﻿namespace Cbcf.View
 
 open wraikny.MilleFeuille
+open wraikny.MilleFeuille.Updater
 open Affogato
 open Affogato.Helper
-open wraikny.Tart.Helper
 open Cbcf
 
 type GameObjectView() =
@@ -11,7 +11,7 @@ type GameObjectView() =
 
   let textureView = new asd.TextureObject2D()
   let rect = new asd.RectangleShape()
-  let sizeView = new asd.GeometryObject2D(Shape = rect, Color = asd.Color(0, 250, 0, 50))
+  //let sizeView = new asd.GeometryObject2D(Shape = rect, Color = asd.Color(0, 250, 0, 50))
 
   do
     base.AddDrawnChildWithAll(textureView)

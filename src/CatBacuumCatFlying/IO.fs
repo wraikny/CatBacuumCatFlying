@@ -54,7 +54,7 @@ let loadCategoryAsync apiKey = async {
 
 open System.Collections.Generic
 
-let downloadImages apiKey dir (category, categoryName) limit dispatch = async {
+let downloadImages apiKey dir (category, categoryName) limit = async {
   let! json = getTheCatApiAsync category limit apiKey
   printfn "Json:\n%s" json
   
@@ -78,7 +78,7 @@ let downloadImages apiKey dir (category, categoryName) limit dispatch = async {
       filenames.Add(filename)
     else
       printfn "%s has alreadly existed" filename
-  dispatch (category, [| for x in filenames -> x |])
+  return (category, [| for x in filenames -> x |])
 }
 
 

@@ -22,8 +22,6 @@
     <ProjectReference Include="..\..\..\Affogato\src\Affogato\Affogato.fsproj" />
     <ProjectReference Include="..\..\..\Mille-Feuille\Dev\Mille-Feuille.Core\Mille-Feuille.csproj" />
     <ProjectReference Include="..\..\..\Mille-Feuille\Dev\Mille-Feuille.Fs\Mille-Feuille.Fs.fsproj" />
-    <ProjectReference Include="..\..\..\Tart\src\Tart.Core\Tart.Core.fsproj" />
-    <ProjectReference Include="..\..\..\Tart\src\Tart.Helper\Tart.Helper.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

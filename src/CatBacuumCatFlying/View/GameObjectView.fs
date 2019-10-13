@@ -1,9 +1,9 @@
 ﻿namespace Cbcf.View
 
 open wraikny.MilleFeuille
+open wraikny.MilleFeuille.Objects
 open Affogato
 open Affogato.Helper
-open wraikny.Tart.Helper
 open Cbcf
 
 type GameObjectView() =

@@ -3,9 +3,27 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net472</TargetFramework>
+    <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="CatBacuumCatFlying.fs" />
+    <Compile Include="Utils.fs" />
+    <Compile Include="IO.fs" />
+    <Compile Include="Model.fs" />
+    <Compile Include="Logic.fs" />
+    <Compile Include="View\Camera.fs" />
+    <Compile Include="View\GameObjectView.fs" />
+    <Compile Include="View\Window.fs" />
+    <Compile Include="View\LongPressCircle.fs" />
+    <Compile Include="View\MainScene.fs" />
+    <Compile Include="Program.fs" />
+    <None Include="paket.references" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Affogato\src\Affogato\Affogato.fsproj" />
+    <ProjectReference Include="..\..\..\Mille-Feuille\Dev\Mille-Feuille.Core\Mille-Feuille.csproj" />
+    <ProjectReference Include="..\..\..\Mille-Feuille\Dev\Mille-Feuille.Fs\Mille-Feuille.Fs.fsproj" />
+    <ProjectReference Include="..\..\..\Tart\src\Tart.Core\Tart.Core.fsproj" />
+    <ProjectReference Include="..\..\..\Tart\src\Tart.Helper\Tart.Helper.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

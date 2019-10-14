@@ -34,22 +34,18 @@ open System.Threading
 open Cbcf
 open Cbcf.ViewModel
 open Elmish
+open Elmish.Reactive
 
 
 type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSetting) =
   inherit Scene()
 
-  //let notifier = new Subjects.Subject<_>()
-
-  //let mutable dispatch = Unchecked.defaultof<_>
-  //let mutable lastModel = Unchecked.defaultof<_>
   let messenger =
     let apiKey = (IO.Altseed.loadString viewSetting.apiKeyPath).Trim()
 
     let init() = Logic.Model.init(setting, gameSetting, apiKey)
 
     Program.mkProgram init Logic.Model.update (fun m _ -> m)
-    |> Program.withErrorHandler(printfn "%A")
     #if DEBUG
     |> Program.withTrace(fun msg _ ->
       if msg <> Msg.Tick then
@@ -57,6 +53,12 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     )
     #endif
     |> Messenger.create
+
+  do
+    messenger.OnError.Add(fun (s, e) ->
+      printfn "%s: %A" s e
+      messenger.Dispatch(SetMode <| ErrorMode e)
+    )
 
 
   let background =
@@ -90,13 +92,13 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     )
 
   do
-    messenger.View
+    messenger
       .Add(fun x ->
         if x.mode = GameMode then
           (player :> IUpdatee<_>).Update(x.game.player)
       )
 
-    messenger.View
+    messenger
       .Where(fun x -> x.mode = GameMode)
       .Select(fun x ->
         [ for a in x.game.flyingCats -> (a.Key, a.object) ]
@@ -125,7 +127,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
 
     hpObj.Shape <- new asd.RectangleShape(DrawingArea=hpArea)
 
-    messenger.View
+    messenger
       .Add(fun x ->
         if x.mode = GameMode then
           let rate = x.game.hp / gameSetting.hp
@@ -155,7 +157,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       textFont
 
   do
-    messenger.View
+    messenger
       .Select(view)
       .Add(fun contents ->
         (window.IsToggleOn, contents.IsEmpty)
@@ -197,7 +199,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
         asd.Vector2DF(float32 asd.Engine.WindowSize.X - float32 size.X, fpsText.Position.Y)
     )
     
-    messenger.View
+    messenger
       .Add(fun x ->
         if x.mode = GameMode then
           scoreObj.Text <- sprintf " Level = %d, Score = %d" x.game.level x.game.score
@@ -216,7 +218,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     new LongPressCircle(m * 0.6f, m * 0.8f)
 
   do
-    messenger.Start()
+    messenger.Run()
 
   override this.OnRegistered() =
 
@@ -249,19 +251,19 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       while true do
         messenger.LastModel.mode |> function
         | GameMode when isPush(asd.Keys.Escape) ->
-          messenger.Enqueue(SetMode PauseMode)
+          messenger.Dispatch(SetMode PauseMode)
         | PauseMode when isPush(asd.Keys.Escape) || isPush(asd.Keys.Space) ->
-          messenger.Enqueue(SetMode GameMode)
+          messenger.Dispatch(SetMode GameMode)
         | _ -> ()
 
         asd.Engine.Keyboard.GetKeyState asd.Keys.Space
         |> function
         | asd.ButtonState.Push ->
-          messenger.Enqueue(Push)
+          messenger.Dispatch(Push)
 
         | asd.ButtonState.Release ->
           if holdCount <= wf then
-            messenger.Enqueue(Release)
+            messenger.Dispatch(Release)
           else
             longPressArc.SetRate(0.0f)
 
@@ -279,7 +281,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
             if holdCount > f + wf then
               holdCount <- 0
               longPressArc.SetRate(0.0f)
-              messenger.Enqueue(LongPress)
+              messenger.Dispatch(LongPress)
 
         | _ -> ()
 
@@ -289,6 +291,6 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
 
   override this.OnUpdated() =
     if messenger.LastModel.mode = GameMode then
-      messenger.Enqueue(Msg.Tick)
+      messenger.Dispatch(Msg.Tick)
     
     //messenger.NotifyView()

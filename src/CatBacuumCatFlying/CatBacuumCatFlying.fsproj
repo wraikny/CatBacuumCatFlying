@@ -6,7 +6,7 @@
     <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="ElmishExt.fs" />
+    <Compile Include="Elmish.Reactive.fs" />
     <Compile Include="Utils.fs" />
     <Compile Include="IO.fs" />
     <Compile Include="Model.fs" />

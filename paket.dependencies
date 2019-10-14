@@ -2,7 +2,7 @@ source https://www.nuget.org/api/v2
 
 nuget Elmish
 nuget FSharp.Core
-nuget AltseedDotNet = 1.1.6
+nuget AltseedDotNet = 1.1.6.1
 nuget FSharp.Data
 nuget FSharpPlus
 nuget System.Reactive

@@ -327,7 +327,6 @@ module Model =
       model, Cmd.ofMsg(SetMode SelectMode)
 
     | SelectMode, SetCategories categories ->
-      //LoadCatsCache x
       let sub dispatch =
         loadCatsCache model.setting categories dispatch
         |> Async.StartImmediate
@@ -354,26 +353,22 @@ module Model =
 
         let ps = model.game.imagePaths |> Map.find (fst model.categories.[model.categoryIndex])
         
-        return (model,
-          ( if ps.Length >= model.setting.gameStartFileCount then 
-              Cmd.ofMsg(SetMode GameMode)
-            else
-              
-              Cmd.batch[
-                Cmd.ofMsg(SetMode WaitingMode)
-                Cmd.OfAsyncImmediate.perform(fun() -> async {
-                  let! child =
-                    IO.downloadImages
-                      model.apiKey
-                      model.setting.theCatApiCacheDirectory
-                      category
-                      model.setting.requestLimit
-                    |> Async.StartChild
-                  return! child
-                }) () (AddImagePaths)
-              ]
-          )
-        )
+        if ps.Length >= model.setting.gameStartFileCount then 
+          return model, Cmd.ofMsg(SetMode GameMode)
+        else
+          return model, Cmd.batch[
+            Cmd.ofMsg(SetMode WaitingMode)
+            Cmd.OfAsyncImmediate.perform(fun() -> async {
+              let! child =
+                IO.downloadImages
+                  model.apiKey
+                  model.setting.theCatApiCacheDirectory
+                  category
+                  model.setting.requestLimit
+                |> Async.StartChild
+              return! child
+            }) () (AddImagePaths)
+          ]
       }
       |> Option.defaultValue (model, Cmd.none)
 
@@ -386,8 +381,8 @@ module Model =
     | GameMode, Release ->
       model |> chain GameModel.release
     
-    | ErrorMode _, LongPress ->
-      model, Cmd.ofMsg(SetMode model.prevMode)
+    //| ErrorMode _, LongPress ->
+    //  model, Cmd.ofMsg(SetMode model.prevMode)
 
     | PauseMode, _
     | TitleMode, _

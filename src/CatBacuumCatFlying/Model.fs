@@ -329,7 +329,7 @@ module ViewModel =
 %s
 @wraikny"""
             model.setting.title levelText scoreText
-
+          |> System.Web.HttpUtility.UrlEncode
           |> sprintf "https://twitter.com/intent/tweet?text=%s"
           |> System.Diagnostics.Process.Start
           |> ignore

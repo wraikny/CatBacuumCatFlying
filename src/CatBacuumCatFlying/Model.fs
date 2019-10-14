@@ -162,6 +162,7 @@ type Mode =
   | SelectMode
   | WaitingMode
   | GameMode
+  | GameOverMode
   | PauseMode
   | ErrorMode of exn
 with
@@ -308,4 +309,13 @@ module ViewModel =
         Line
         Text "スペース/Escボタンでコンティニュー"
         Text "スペースボタン長押しでタイトル"
+      ]
+
+    | GameOverMode ->
+      [
+        Header "ゲームオーバー"
+        Line
+        Text (sprintf "レベル: %d" model.game.level)
+        Text (sprintf "スコア: %d" model.game.score)
+        Text (sprintf "残HP: %f" model.game.hp)
       ]

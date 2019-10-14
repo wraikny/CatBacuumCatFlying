@@ -43,6 +43,7 @@ open Elmish.Reactive
 type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSetting) =
   inherit Scene()
 
+  let scoreObj = new asd.TextObject2D(Text = " ")
   let hitEffect = new HitEffect(viewSetting.hitEffectScaleRate, viewSetting.hitEffectFrame)
 
   let messenger =
@@ -51,6 +52,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     let port = {
       addEffect = hitEffect.AddEffect
       clear = fun() ->
+        scoreObj.Text <- " "
         hitEffect.Clear()
     }
 
@@ -210,27 +212,31 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
           
       )
 
-  let scoreObj = new asd.TextObject2D(Font = largeFont, Text = " ")
   let fpsText = new asd.TextObject2D(Font = largeFont)
   do
+    scoreObj.Font <- largeFont
+
     fpsText.AddOnUpdateEvent(fun() ->
       fpsText.Text <- sprintf "FPS: %d" <| int asd.Engine.CurrentFPS
       let size = fpsText.Font.HorizontalSize(fpsText.Text)
       fpsText.Position <-
-        asd.Vector2DF(float32 asd.Engine.WindowSize.X - float32 size.X, fpsText.Position.Y)
+        asd.Engine.WindowSize.To2DF() - size.To2DF()
     )
     
     messenger
       .Add(fun x ->
         if x.mode = GameMode || x.mode = PauseMode then
-          scoreObj.Text <- sprintf " Level = %d, Score = %d" x.game.level x.game.score
+          scoreObj.Text <- sprintf "レベル:%d, スコア:%d" x.game.level x.game.score
+
           let size = scoreObj.Font.HorizontalSize(scoreObj.Text)
           scoreObj.Position <-
             asd.Vector2DI(
               asd.Engine.WindowSize.X - size.X
               , 0).To2DF()
+
+          let size = fpsText.Font.HorizontalSize(fpsText.Text)
           fpsText.Position <-
-            asd.Vector2DF(fpsText.Position.X, float32 size.Y)
+            asd.Engine.WindowSize.To2DF() - size.To2DF()
       )
 
   let longPressArc =

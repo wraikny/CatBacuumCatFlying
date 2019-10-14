@@ -11,6 +11,7 @@ type LongPressCircle(r1, r2) =
     )
   do
     base.Shape <- arc
+    base.Color <- asd.Color(255, 165, 163, 200)
 
   member __.SetRate(t) =
     let e = t * 100.0f |> int

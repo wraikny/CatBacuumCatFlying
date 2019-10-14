@@ -1,5 +1,7 @@
 ﻿namespace Cbcf.View
 
+open System.Collections.Generic
+open System.Linq
 open Cbcf
 
 open Affogato
@@ -12,15 +14,24 @@ type HitEffect(scaleDiff: float32, frame) =
 
   let alpha = 200
 
+  let objs = HashSet<asd.TextureObject2D>()
   let pooling =
     ObjectsPool(
       (fun() ->
         new asd.TextureObject2D()
       ), 4)
 
+  let reset obj =
+    pooling.Push(obj)
+    obj.IsUpdated <- false
+    obj.IsDrawn <- false
+    objs.Remove(obj) |> ignore
+
   member __.Clear() =
-    pooling.Clear()
-    for obj in base.Owner.Objects do obj.Dispose()
+    for x in objs.ToArray() do
+      x.CoroutineManager().Clear()
+      reset x
+
 
 
   member this.AddEffect(flyingCat: FlyingCat) =
@@ -28,6 +39,7 @@ type HitEffect(scaleDiff: float32, frame) =
     let path = flyingCat.object.imagePath
 
     let obj = pooling.Pop()
+    objs.Add(obj) |> ignore
 
     if isNull obj.Layer then
       this.Owner.AddObject(obj)
@@ -61,9 +73,7 @@ type HitEffect(scaleDiff: float32, frame) =
         let b = Easing.calculate Easing.InSine frame i
         obj.Color <- asd.Color(255, 255, 255, int <| (1.0f - b) * (float32 alpha))
 
-      obj.IsUpdated <- false
-      obj.IsDrawn <- false
-      pooling.Push(obj)
+      reset(obj)
       yield()
 
     })

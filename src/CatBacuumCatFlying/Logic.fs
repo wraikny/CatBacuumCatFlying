@@ -391,11 +391,15 @@ module Model =
       }
       , Cmd.ofMsg(SetMode TitleMode)
 
+    | GameOverMode, LongPress ->
+      model, Cmd.ofMsg(SetMode TitleMode)
+
     | PauseMode, _
     | TitleMode, _
     | SelectMode, _
     | GameMode, _
     | _, SetCategories _
     | WaitingMode, _
+    | GameOverMode, _
     | ErrorMode _, _
       -> model, Cmd.none

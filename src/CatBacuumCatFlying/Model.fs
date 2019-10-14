@@ -142,6 +142,11 @@ type GameModel = {
 
   }
 
+  static member inline Restart(model) =
+    { GameModel.Init(model.setting) with
+        imagePaths = model.imagePaths
+    }
+
   static member inline LevelUp(x) =
     let level = x.level + one
     { x with
@@ -177,7 +182,8 @@ type Setting = {
 }
 
 type Port = {
-  addEffect : FlyingCat -> unit
+  addEffect: FlyingCat -> unit
+  clear: unit -> unit
 }
 
 type Model = {
@@ -281,7 +287,9 @@ module ViewModel =
       ]
     | WaitingMode ->
       [
-        Text "画像ファイルをダウンロード中..."
+        Header "画像をダウンロード中..."
+        Line
+        Text "セキュリティソフトによって処理が一時停止する場合があります"
         Text "しばらくお待ち下さい"
       ]
     | GameMode -> []
@@ -296,6 +304,8 @@ module ViewModel =
 
     | PauseMode ->
       [
-        Text "ポーズ"
-        Text "スペースボタンかEscボタンで解除"
+        Header "ポーズ"
+        Line
+        Text "スペース/Escボタンでコンティニュー"
+        Text "スペースボタン長押しでタイトル"
       ]

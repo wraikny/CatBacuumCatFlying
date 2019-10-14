@@ -18,6 +18,9 @@ type HitEffect(scaleDiff: float32, frame) =
         new asd.TextureObject2D()
       ), 4)
 
+  member __.Clear() =
+    pooling.Clear()
+    for obj in base.Owner.Objects do obj.Dispose()
 
 
   member this.AddEffect(flyingCat: FlyingCat) =
@@ -54,7 +57,9 @@ type HitEffect(scaleDiff: float32, frame) =
       for i in 1..frame ->
         let a = Easing.calculate Easing.OutSine frame i
         obj.Scale <- scale + asd.Vector2DF(1.0f, 1.0f) * scaleDiff * a
-        obj.Color <- asd.Color(255, 255, 255, int <| (1.0f - a) * (float32 alpha))
+
+        let b = Easing.calculate Easing.InSine frame i
+        obj.Color <- asd.Color(255, 255, 255, int <| (1.0f - b) * (float32 alpha))
 
       obj.IsUpdated <- false
       obj.IsDrawn <- false

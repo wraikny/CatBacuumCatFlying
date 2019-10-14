@@ -143,7 +143,10 @@ module GameModel =
           let b = stg.floorHeight - size.y
           (float32 <| Random.rand.NextDouble()) * (b - a) + a
 
-        let currentPaths = model.imagePaths |> Map.find model.category
+        let currentPaths =
+          model.imagePaths
+          |> Map.tryFind model.category
+          |> Option.defaultValue empty
         let imageIndex = Random.rand.Next(0, currentPaths.Length)
 
         let pos = Vector2.init stg.generateX (float32 posY)
@@ -262,17 +265,17 @@ module Model =
     (model.mode, msg) |> function
     | _, AddImagePaths (c, ss) ->
       let xs =
-        model.game.imagePaths |> Map.tryFind c
-        |> function
-          | Some x -> Array.append ss x
-          | None -> ss
+        model.game.imagePaths
+        |> Map.tryFind c
+        |> Option.defaultValue empty
+        |> Array.append ss
 
       let newMap = Map.add c xs model.game.imagePaths
 
       { model with
           game = { model.game with imagePaths = newMap }
       }, (
-        let ps = newMap |> Map.find (fst model.categories.[model.categoryIndex])
+        //let ps = newMap |> Map.find (fst model.categories.[model.categoryIndex])
         if model.mode = WaitingMode then
           Cmd.ofMsg(SetMode GameMode)
         else Cmd.none
@@ -299,7 +302,7 @@ module Model =
     | SelectMode, SetMode GameMode
     | WaitingMode, SetMode GameMode ->
       let category = fst model.categories.[model.categoryIndex]
-      let ps = model.game.imagePaths |> Map.find category
+      let ps = model.game.imagePaths |> Map.tryFind category |> Option.defaultValue empty
       let cmd =
         let i = Random.rand.Next(0, ps.Length - 1)
         SetPlayerImage ps.[i] |> GameMsg |> Cmd.ofMsg
@@ -329,12 +332,6 @@ module Model =
 
       { model with
           categories = categories
-          game =
-            { model.game with
-                imagePaths =
-                  seq { for (i, _) in categories -> (i, Array.empty)}
-                  |> Map.ofSeq
-            }
       }, Cmd.ofSub sub
 
     | SelectMode, Release when model.categories.Length > 0 ->
@@ -347,7 +344,10 @@ module Model =
       monad {
         let! category = model.categories |> Array.tryItem model.categoryIndex
 
-        let ps = model.game.imagePaths |> Map.find (fst model.categories.[model.categoryIndex])
+        let ps =
+          model.game.imagePaths
+          |> Map.tryFind (fst model.categories.[model.categoryIndex])
+          |> Option.defaultValue empty
         
         if ps.Length >= model.setting.gameStartFileCount then 
           return model, Cmd.ofMsg(SetMode GameMode)
@@ -379,6 +379,17 @@ module Model =
     
     //| ErrorMode _, LongPress ->
     //  model, Cmd.ofMsg(SetMode model.prevMode)
+
+    | PauseMode, Release ->
+      model, Cmd.ofMsg(SetMode GameMode)
+
+    | PauseMode, LongPress ->
+      model.port.clear()
+      { model with
+          categoryIndex = zero
+          game = GameModel.Restart(model.game)
+      }
+      , Cmd.ofMsg(SetMode TitleMode)
 
     | PauseMode, _
     | TitleMode, _

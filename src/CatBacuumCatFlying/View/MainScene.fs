@@ -50,6 +50,8 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
 
     let port = {
       addEffect = hitEffect.AddEffect
+      clear = fun() ->
+        hitEffect.Clear()
     }
 
     let init() = Logic.Model.init(setting, gameSetting, apiKey, port)
@@ -208,7 +210,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
           
       )
 
-  let scoreObj = new asd.TextObject2D(Font = largeFont)
+  let scoreObj = new asd.TextObject2D(Font = largeFont, Text = " ")
   let fpsText = new asd.TextObject2D(Font = largeFont)
   do
     fpsText.AddOnUpdateEvent(fun() ->
@@ -220,7 +222,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     
     messenger
       .Add(fun x ->
-        if x.mode = GameMode then
+        if x.mode = GameMode || x.mode = PauseMode then
           scoreObj.Text <- sprintf " Level = %d, Score = %d" x.game.level x.game.score
           let size = scoreObj.Font.HorizontalSize(scoreObj.Text)
           scoreObj.Position <-
@@ -268,14 +270,17 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       let wf = viewSetting.longPressFrameWait
       let f = viewSetting.longPressFrame
 
-      let isPush(key) =
-        asd.Engine.Keyboard.GetKeyState key = asd.ButtonState.Push
+      let inline isState state key =
+        asd.Engine.Keyboard.GetKeyState key = state
+
+      //let isPush = isState asd.ButtonState.Push
+      let isRelease = isState asd.ButtonState.Release
 
       while true do
         messenger.LastModel.mode |> function
-        | GameMode when isPush(asd.Keys.Escape) ->
+        | GameMode when isRelease(asd.Keys.Escape) ->
           messenger.Dispatch(SetMode PauseMode)
-        | PauseMode when isPush(asd.Keys.Escape) || isPush(asd.Keys.Space) ->
+        | PauseMode when isRelease(asd.Keys.Escape) ->
           messenger.Dispatch(SetMode GameMode)
         | _ -> ()
 

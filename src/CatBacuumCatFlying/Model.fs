@@ -159,6 +159,14 @@ type Mode =
   | GameMode
   | PauseMode
   | ErrorMode of exn
+with
+  member x.EnabledLongPress = x |> function
+    | GameMode
+    | WaitingMode
+    | ErrorMode _
+      -> false
+    | _ -> true
+
 
 type Setting = {
   requestLimit: int
@@ -277,8 +285,6 @@ module ViewModel =
         Line
         Text "スタッフ/製作者に教えてもらえると嬉しいです"
         Text (sprintf "ログファイルは'%s'に出力されます" model.setting.errorLogPath)
-        Line
-        Text "スペースボタン長押しで無視して継続"
       ]
 
     | PauseMode ->

@@ -268,21 +268,19 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
           holdCount <- 0
 
         | asd.ButtonState.Hold ->
-          messenger.LastModel.mode |> function
-          | GameMode | WaitingMode -> ()
-          | _ when holdCount <= f + wf ->
+          if messenger.LastModel.mode.EnabledLongPress && (holdCount <= f + wf) then
             holdCount <- holdCount + one
 
             if holdCount > wf then
               longPressArc.SetRate(
                 float32 (holdCount - wf) / float32 f
               )
+
             if holdCount > f + wf then
               holdCount <- 0
               longPressArc.SetRate(0.0f)
               messenger.Enqueue(LongPress)
 
-          | _ -> ()
         | _ -> ()
 
         yield()

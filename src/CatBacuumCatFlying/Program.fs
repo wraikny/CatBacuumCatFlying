@@ -66,7 +66,7 @@ let viewSetting = {
   textSize = 20
   lineWidth = 5.0f
 
-  longPressFrame = 90
+  longPressFrame = 60
   longPressFrameWait = 30
 }
 

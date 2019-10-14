@@ -47,6 +47,7 @@ type GameSetting = {
 
   hp: float32
 
+  scoreDiffPerSec: uint32
   levelScoreStage: uint32
   levelFrameStage: uint32
 } with
@@ -142,6 +143,11 @@ type GameModel = {
 
   }
 
+  static member inline Restart(model) =
+    { GameModel.Init(model.setting) with
+        imagePaths = model.imagePaths
+    }
+
   static member inline LevelUp(x) =
     let level = x.level + one
     { x with
@@ -157,6 +163,7 @@ type Mode =
   | SelectMode
   | WaitingMode
   | GameMode
+  | GameOverMode
   | PauseMode
   | ErrorMode of exn
 with
@@ -176,6 +183,11 @@ type Setting = {
   errorLogPath: string
 }
 
+type Port = {
+  addEffect: FlyingCat -> unit
+  clear: unit -> unit
+}
+
 type Model = {
   setting: Setting
   prevMode: Mode
@@ -186,8 +198,9 @@ type Model = {
   categories: (int * string) []
   categoryIndex: int
 
+  port: Port
 } with
-  static member inline Init(setting, gameSetting, apiKey) = {
+  static member inline Init(setting, gameSetting, apiKey, port) = {
     setting = setting
     prevMode = TitleMode
     mode = TitleMode
@@ -195,6 +208,8 @@ type Model = {
     apiKey = apiKey
     categories = Array.empty
     categoryIndex = 0
+
+    port = port
   }
 
   static member inline Set(model, x) =
@@ -235,6 +250,7 @@ module ViewModel =
     | Text of string
     | Large of string
     | Line
+    | Button of string * (unit -> unit)
 
 
   let view model =
@@ -274,7 +290,9 @@ module ViewModel =
       ]
     | WaitingMode ->
       [
-        Text "画像ファイルをダウンロード中..."
+        Header "画像をダウンロード中..."
+        Line
+        Text "セキュリティソフトによって処理が一時停止する場合があります"
         Text "しばらくお待ち下さい"
       ]
     | GameMode -> []
@@ -289,6 +307,32 @@ module ViewModel =
 
     | PauseMode ->
       [
-        Text "ポーズ"
-        Text "スペースボタンかEscボタンで解除"
+        Header "ポーズ"
+        Line
+        Text "スペース/Escボタンでコンティニュー"
+        Text "スペースボタン長押しでタイトル"
+      ]
+
+    | GameOverMode ->
+      let levelText = sprintf "ステージ: %d" model.game.level
+      let scoreText = sprintf "スコア: %d" model.game.score
+      [
+        Header "ゲームオーバー"
+        Line
+        Text levelText
+        Text scoreText
+
+        Line
+        Button("ツイートする", fun() ->
+          sprintf """「%s」をプレイしました！
+%s
+%s
+@wraikny"""
+            model.setting.title levelText scoreText
+          |> System.Web.HttpUtility.UrlEncode
+          |> sprintf "https://twitter.com/intent/tweet?text=%s"
+          |> System.Diagnostics.Process.Start
+          |> ignore
+        )
+
       ]

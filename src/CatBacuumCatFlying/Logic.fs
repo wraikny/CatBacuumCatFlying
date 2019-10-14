@@ -87,35 +87,33 @@ module GameModel =
   let inline private mapFlyingCat f (model: GameModel): GameModel =
     { model with flyingCats = Array.choose f model.flyingCats }
 
-  let inline private calculate (model: GameModel) =
-    let collidedMap =
-      seq {
-        for x in model.flyingCats do
-          if GameObject.inCollision model.player x then
-            yield (x.Key, ())
-      }
-      |> HashMap.ofSeq
+  let inline private calculate (port: Port) (model: GameModel) =
+    let mutable score = zero
+    let mutable hp = zero
 
-    let score, hp =
-      let mutable score = zero
-      let mutable hp = zero
+    let nextFlyingCats = [|
       for x in model.flyingCats do
-        if HashMap.containsKey x.Key collidedMap then
+        if GameObject.inCollision model.player x then
           x.kind |> function
           | Score a -> score <- score + a
           | HP a -> hp <- hp + a
 
-      score, hp
+          port.addEffect(x)
+        else
+          yield x
+    |]
 
     let newScore = model.scoreForLevelStage + score
+    let newHp = hp + model.hp |> max zero |> min model.setting.hp
     let scoreLebelUp = (model.scoreForLevelStage + score) > model.setting.levelScoreStage
 
     { model with
-        flyingCats = model.flyingCats |> Array.filter (fun x -> not <| HashMap.containsKey x.Key collidedMap)
+        flyingCats = nextFlyingCats
         score = score + model.score
-        hp = hp + model.hp |> max zero |> min model.setting.hp
+        hp = newHp
         scoreForLevelStage = if scoreLebelUp then zero else newScore
     } |> ifThen(scoreLebelUp) GameModel.LevelUp
+    , (if newHp = zero then Cmd.ofMsg(SetMode GameOverMode) else Cmd.none)
 
 
   let private countup (model: GameModel): GameModel =
@@ -123,7 +121,8 @@ module GameModel =
     { model with
         count = count
         generateCount = model.generateCount + one
-    } |> ifThen (count % model.setting.levelFrameStage = 0u) GameModel.LevelUp
+        score = if count % 60u = zero then model.score + model.setting.scoreDiffPerSec else model.score
+    } |> ifThen (count % model.setting.levelFrameStage = zero) GameModel.LevelUp
 
 
   let private addFlyingCatCheck (model: GameModel) =
@@ -147,7 +146,10 @@ module GameModel =
           let b = stg.floorHeight - size.y
           (float32 <| Random.rand.NextDouble()) * (b - a) + a
 
-        let currentPaths = model.imagePaths |> Map.find model.category
+        let currentPaths =
+          model.imagePaths
+          |> Map.tryFind model.category
+          |> Option.defaultValue empty
         let imageIndex = Random.rand.Next(0, currentPaths.Length)
 
         let pos = Vector2.init stg.generateX (float32 posY)
@@ -161,7 +163,11 @@ module GameModel =
     else
       model, Cmd.none
 
-  let update (msg: GameMsg) (model: GameModel) =
+  let andThen f (m, c) =
+    let m, c' = f m
+    m, Cmd.batch[c; c']
+
+  let update (port: Port) (msg: GameMsg) (model: GameModel) =
     msg |> function
     | Tick ->
       let stg = model.setting
@@ -170,8 +176,8 @@ module GameModel =
       |> countup
       |> mapPlayer (Player.update stg)
       |> mapFlyingCat (FlyingCat.update)
-      |> calculate
-      |> addFlyingCatCheck
+      |> calculate port
+      |> andThen addFlyingCatCheck
 
     | AddFlyingCat x ->
       //printfn "AddFlyingCat %A" x
@@ -266,17 +272,17 @@ module Model =
     (model.mode, msg) |> function
     | _, AddImagePaths (c, ss) ->
       let xs =
-        model.game.imagePaths |> Map.tryFind c
-        |> function
-          | Some x -> Array.append ss x
-          | None -> ss
+        model.game.imagePaths
+        |> Map.tryFind c
+        |> Option.defaultValue empty
+        |> Array.append ss
 
       let newMap = Map.add c xs model.game.imagePaths
 
       { model with
           game = { model.game with imagePaths = newMap }
       }, (
-        let ps = newMap |> Map.find (fst model.categories.[model.categoryIndex])
+        //let ps = newMap |> Map.find (fst model.categories.[model.categoryIndex])
         if model.mode = WaitingMode then
           Cmd.ofMsg(SetMode GameMode)
         else Cmd.none
@@ -303,7 +309,7 @@ module Model =
     | SelectMode, SetMode GameMode
     | WaitingMode, SetMode GameMode ->
       let category = fst model.categories.[model.categoryIndex]
-      let ps = model.game.imagePaths |> Map.find category
+      let ps = model.game.imagePaths |> Map.tryFind category |> Option.defaultValue empty
       let cmd =
         let i = Random.rand.Next(0, ps.Length - 1)
         SetPlayerImage ps.[i] |> GameMsg |> Cmd.ofMsg
@@ -333,12 +339,6 @@ module Model =
 
       { model with
           categories = categories
-          game =
-            { model.game with
-                imagePaths =
-                  seq { for (i, _) in categories -> (i, Array.empty)}
-                  |> Map.ofSeq
-            }
       }, Cmd.ofSub sub
 
     | SelectMode, Release when model.categories.Length > 0 ->
@@ -351,7 +351,10 @@ module Model =
       monad {
         let! category = model.categories |> Array.tryItem model.categoryIndex
 
-        let ps = model.game.imagePaths |> Map.find (fst model.categories.[model.categoryIndex])
+        let ps =
+          model.game.imagePaths
+          |> Map.tryFind (fst model.categories.[model.categoryIndex])
+          |> Option.defaultValue empty
         
         if ps.Length >= model.setting.gameStartFileCount then 
           return model, Cmd.ofMsg(SetMode GameMode)
@@ -373,7 +376,7 @@ module Model =
       |> Option.defaultValue (model, Cmd.none)
 
     | GameMode, GameMsg m ->
-      model |> chain (GameModel.update m)
+      model |> chain (GameModel.update model.port m)
 
     | GameMode, Push ->
       model |> chain GameModel.push
@@ -384,11 +387,26 @@ module Model =
     //| ErrorMode _, LongPress ->
     //  model, Cmd.ofMsg(SetMode model.prevMode)
 
+    | PauseMode, Release ->
+      model, Cmd.ofMsg(SetMode GameMode)
+
+    | PauseMode, LongPress ->
+      model.port.clear()
+      { model with
+          categoryIndex = zero
+          game = GameModel.Restart(model.game)
+      }
+      , Cmd.ofMsg(SetMode TitleMode)
+
+    | GameOverMode, LongPress ->
+      model, Cmd.ofMsg(SetMode TitleMode)
+
     | PauseMode, _
     | TitleMode, _
     | SelectMode, _
     | GameMode, _
     | _, SetCategories _
     | WaitingMode, _
+    | GameOverMode, _
     | ErrorMode _, _
       -> model, Cmd.none

@@ -23,6 +23,8 @@ let private getTheCatApiAsync (categoryId: int) (limit: int) apiKey =
         "api_key", apiKey
         "format", "json"
         "limit", limit.ToString()
+        "order", "RANDOM"
+        "size", "small"
         "category_ids", categoryId.ToString()
       ],
       headers = [ "Accept", "application/json" ]
@@ -56,8 +58,10 @@ open System.Collections.Generic
 
 let downloadImages apiKey dir (category, categoryName) limit = async {
   let! json = getTheCatApiAsync category limit apiKey
+  #if DEBUG
   printfn "Json:\n%s" json
-  
+  #endif
+
   let dirname = sprintf "%s/%s" dir categoryName
 
   if System.IO.Directory.Exists dirname |> not then
@@ -74,10 +78,16 @@ let downloadImages apiKey dir (category, categoryName) limit = async {
       use! stream = downloadImage x.Url
     
       saveImageStreamAsPng filename stream
+      #if DEBUG
       printfn "Saved %s" filename
+      #endif
       filenames.Add(filename)
     else
+      #if DEBUG
       printfn "%s has alreadly existed" filename
+      #endif
+      ()
+
   return (category, [| for x in filenames -> x |])
 }
 

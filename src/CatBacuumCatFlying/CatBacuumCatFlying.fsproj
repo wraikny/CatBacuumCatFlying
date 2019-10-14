@@ -15,6 +15,7 @@
     <Compile Include="View\GameObjectView.fs" />
     <Compile Include="View\Window.fs" />
     <Compile Include="View\LongPressCircle.fs" />
+    <Compile Include="View\HitEffect.fs" />
     <Compile Include="View\MainScene.fs" />
     <Compile Include="Program.fs" />
     <None Include="paket.references" />
@@ -23,6 +24,9 @@
     <ProjectReference Include="..\..\..\Affogato\src\Affogato\Affogato.fsproj" />
     <ProjectReference Include="..\..\..\Mille-Feuille\Dev\Mille-Feuille.Core\Mille-Feuille.csproj" />
     <ProjectReference Include="..\..\..\Mille-Feuille\Dev\Mille-Feuille.Fs\Mille-Feuille.Fs.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Web" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

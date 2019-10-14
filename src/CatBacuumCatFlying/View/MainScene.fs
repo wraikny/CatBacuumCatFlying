@@ -21,6 +21,9 @@ type ViewSetting = {
 
   longPressFrameWait: int
   longPressFrame: int
+
+  hitEffectFrame: int
+  hitEffectScaleRate: float32
 }
 
 
@@ -40,10 +43,20 @@ open Elmish.Reactive
 type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSetting) =
   inherit Scene()
 
+  let scoreObj = new asd.TextObject2D(Text = " ")
+  let hitEffect = new HitEffect(viewSetting.hitEffectScaleRate, viewSetting.hitEffectFrame)
+
   let messenger =
     let apiKey = (IO.Altseed.loadString viewSetting.apiKeyPath).Trim()
 
-    let init() = Logic.Model.init(setting, gameSetting, apiKey)
+    let port = {
+      addEffect = hitEffect.AddEffect
+      clear = fun() ->
+        scoreObj.Text <- " "
+        hitEffect.Clear()
+    }
+
+    let init() = Logic.Model.init(setting, gameSetting, apiKey, port)
 
     Program.mkProgram init Logic.Model.update (fun m _ -> m)
     #if DEBUG
@@ -73,9 +86,15 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     )
 
   let backLayer = new asd.Layer2D()
-  let layer = new asd.Layer2D(IsUpdated = false, IsDrawn = false)
+  let mainLayer = new asd.Layer2D(IsUpdated = false, IsDrawn = false)
+  let effectLayer = new asd.Layer2D(IsUpdated = false, IsDrawn = false)
   let uiLayer = new asd.Layer2D()
   let longPressArcLayer = new asd.Layer2D()
+
+  let gameLayers = [
+    mainLayer
+    effectLayer
+  ]
 
   let player =
     new GameObjectView(DrawingPriority = 2)
@@ -102,7 +121,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       .Where(fun x -> x.mode = GameMode)
       .Select(fun x ->
         [ for a in x.game.flyingCats -> (a.Key, a.object) ]
-      ).Subscribe(new ActorsUpdater<_, _, _>(layer, fun() -> new FlyingCatView(DrawingPriority = 1)))
+      ).Subscribe(new ActorsUpdater<_, _, _>(mainLayer, fun() -> new FlyingCatView(DrawingPriority = 1)))
       |> ignore
 
     let areaX = float32 gameSetting.areaSize.x
@@ -112,7 +131,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     let hpArea =
       asd.RectF(
         areaX * 0.1f,
-        gameSetting.floorHeight + areaHeight * 0.5f,
+        gameSetting.floorHeight + areaHeight * 0.1f,
         areaX * 0.8f,
         areaHeight * 0.1f
       )
@@ -150,7 +169,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
   let textFont = createFont viewSetting.textSize 0
   let largeFont = createFont viewSetting.largeSize 1
 
-  let _, window =
+  let mouse, window =
     Window.create
       (asd.Engine.WindowSize.ToVector2F())
       viewSetting.menuSetting
@@ -164,8 +183,10 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
         |> function
         | true, true ->
             window.Toggle(false, fun() ->
-              layer.IsUpdated <- true
-              layer.IsDrawn <- true
+              gameLayers |> iter (fun layer ->
+                layer.IsUpdated <- true
+                layer.IsDrawn <- true
+              )
             )
         | x, false ->
           window.UIContents <-
@@ -178,38 +199,45 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
                 UI.TextWith(s, largeFont)
               | Text s -> UI.Text s
               | Line -> UI.Rect(viewSetting.lineWidth, 0.8f)
+              | Button(s, f) -> UI.Button(s, f)
             )
 
           if not x then
-            layer.IsUpdated <- false
-            layer.IsDrawn <- false
+            gameLayers |> iter(fun layer ->
+              layer.IsUpdated <- false
+              layer.IsDrawn <- false
+            )
             window.Toggle(true)
 
         | _, _ -> ()
           
       )
 
-  let scoreObj = new asd.TextObject2D(Font = largeFont)
   let fpsText = new asd.TextObject2D(Font = largeFont)
   do
+    scoreObj.Font <- largeFont
+
     fpsText.AddOnUpdateEvent(fun() ->
       fpsText.Text <- sprintf "FPS: %d" <| int asd.Engine.CurrentFPS
       let size = fpsText.Font.HorizontalSize(fpsText.Text)
       fpsText.Position <-
-        asd.Vector2DF(float32 asd.Engine.WindowSize.X - float32 size.X, fpsText.Position.Y)
+        asd.Engine.WindowSize.To2DF() - size.To2DF()
     )
     
     messenger
       .Add(fun x ->
-        if x.mode = GameMode then
-          scoreObj.Text <- sprintf " Level = %d, Score = %d" x.game.level x.game.score
+        if x.mode = GameMode || x.mode = PauseMode then
+          scoreObj.Text <- sprintf "ステージ:%d / スコア:%d" x.game.level x.game.score
+
           let size = scoreObj.Font.HorizontalSize(scoreObj.Text)
           scoreObj.Position <-
             asd.Vector2DI(
               asd.Engine.WindowSize.X - size.X
               , 0).To2DF()
+
+          let size = fpsText.Font.HorizontalSize(fpsText.Text)
           fpsText.Position <-
-            asd.Vector2DF(fpsText.Position.X, float32 size.Y)
+            asd.Engine.WindowSize.To2DF() - size.To2DF()
       )
 
   let longPressArc =
@@ -223,21 +251,26 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
   override this.OnRegistered() =
 
     this.AddLayer(backLayer)
-    this.AddLayer(layer)
+    this.AddLayer(mainLayer)
+    this.AddLayer(effectLayer)
     this.AddLayer(uiLayer)
     this.AddLayer(longPressArcLayer)
 
     backLayer.AddObject(background)
     backLayer.AddCamera(gameSetting)
 
-    layer.AddCamera(gameSetting)
-    layer.AddObject(hpObj)
-    layer.AddObject(player)
-    layer.AddObject(bacuumObj)
+    mainLayer.AddCamera(gameSetting)
+    mainLayer.AddObject(hpObj)
+    mainLayer.AddObject(player)
+    mainLayer.AddObject(bacuumObj)
+
+    effectLayer.AddCamera(gameSetting)
+    hitEffect.Attach(effectLayer)
 
     uiLayer.AddObject(scoreObj)
     uiLayer.AddObject(fpsText)
     uiLayer.AddObject(window)
+    uiLayer.AddMouseButtonSelecter(mouse, "Mouse")
     longPressArcLayer.AddObject(longPressArc)
 
     this.AddCoroutineAsParallel(seq {
@@ -245,14 +278,17 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       let wf = viewSetting.longPressFrameWait
       let f = viewSetting.longPressFrame
 
-      let isPush(key) =
-        asd.Engine.Keyboard.GetKeyState key = asd.ButtonState.Push
+      let inline isState state key =
+        asd.Engine.Keyboard.GetKeyState key = state
+
+      //let isPush = isState asd.ButtonState.Push
+      let isRelease = isState asd.ButtonState.Release
 
       while true do
         messenger.LastModel.mode |> function
-        | GameMode when isPush(asd.Keys.Escape) ->
+        | GameMode when isRelease(asd.Keys.Escape) ->
           messenger.Dispatch(SetMode PauseMode)
-        | PauseMode when isPush(asd.Keys.Escape) || isPush(asd.Keys.Space) ->
+        | PauseMode when isRelease(asd.Keys.Escape) ->
           messenger.Dispatch(SetMode GameMode)
         | _ -> ()
 

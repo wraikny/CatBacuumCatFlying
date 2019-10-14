@@ -7,6 +7,7 @@ type MenuSetting = {
   frameColor: asd.Color
   rectColor: asd.Color
   widthRate: float32
+  buttonColor: UI.ButtonColor
 }
 
 module Window =
@@ -19,9 +20,9 @@ module Window =
           itemAlignment = UI.WindowSetting.Center
 
           frameColor = menuSetting.frameColor
-          //button = menuSetting.buttonColor
-          //inputColor = menuSetting.inputColor
+          button = menuSetting.buttonColor
           //inputFocusColor = menuSetting.inputFocusColor
+          //inputColor = menuSetting.inputColor
 
           rectColor = menuSetting.rectColor
 

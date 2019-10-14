@@ -12,7 +12,7 @@ let setting = {
   title = "Cat Bacuum Cat Flying"
 }
 
-let gameSetting = {
+let gameSetting: GameSetting = {
   areaSize = Vector2.init 1600 900
   playerSize = Vector2.init 256.0f 256.0f
   flyingCatsSize = Vector2.init 128.0f 128.0f
@@ -40,6 +40,7 @@ let gameSetting = {
   generatePerMin = 30.0f, 5.0f
   generateX = 2100.0f
 
+  scoreDiffPerSec = 5u
   levelScoreStage = 100u
   levelFrameStage = 60u * 5u
 }
@@ -56,6 +57,12 @@ let viewSetting = {
     rectColor = asd.Color(66, 164, 245, 255)
   
     widthRate = 0.8f
+
+    buttonColor = {
+      defaultColor = asd.Color(112, 162, 255, 255)
+      hoverColor = asd.Color(202, 220, 252, 255)
+      holdColor = asd.Color(112, 162, 255, 255)
+    }
   }
 
   fontPath = "mplus-1c-regular.ttf"
@@ -68,6 +75,9 @@ let viewSetting = {
 
   longPressFrame = 60
   longPressFrameWait = 30
+
+  hitEffectFrame = 240
+  hitEffectScaleRate = 3.0f
 }
 
 open wraikny.MilleFeuille
@@ -83,6 +93,8 @@ let main _ =
 
   #if DEBUG
   asd.Engine.File.AddRootDirectory("Resources")
+  #else
+  asd.Engine.File.AddRootPackage("Resources.pack")
   #endif
 
   asd.Engine.ChangeScene(new MainScene(setting, gameSetting, viewSetting))

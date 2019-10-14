@@ -56,6 +56,12 @@ let viewSetting = {
     rectColor = asd.Color(66, 164, 245, 255)
   
     widthRate = 0.8f
+
+    buttonColor = {
+      defaultColor = asd.Color(112, 162, 255, 255)
+      hoverColor = asd.Color(202, 220, 252, 255)
+      holdColor = asd.Color(112, 162, 255, 255)
+    }
   }
 
   fontPath = "mplus-1c-regular.ttf"

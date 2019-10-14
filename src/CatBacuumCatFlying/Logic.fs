@@ -104,14 +104,16 @@ module GameModel =
     |]
 
     let newScore = model.scoreForLevelStage + score
+    let newHp = hp + model.hp |> max zero |> min model.setting.hp
     let scoreLebelUp = (model.scoreForLevelStage + score) > model.setting.levelScoreStage
 
     { model with
         flyingCats = nextFlyingCats
         score = score + model.score
-        hp = hp + model.hp |> max zero |> min model.setting.hp
+        hp = newHp
         scoreForLevelStage = if scoreLebelUp then zero else newScore
     } |> ifThen(scoreLebelUp) GameModel.LevelUp
+    , (if newHp = zero then Cmd.ofMsg(SetMode GameOverMode) else Cmd.none)
 
 
   let private countup (model: GameModel): GameModel =
@@ -160,6 +162,10 @@ module GameModel =
     else
       model, Cmd.none
 
+  let andThen f (m, c) =
+    let m, c' = f m
+    m, Cmd.batch[c; c']
+
   let update (port: Port) (msg: GameMsg) (model: GameModel) =
     msg |> function
     | Tick ->
@@ -170,7 +176,7 @@ module GameModel =
       |> mapPlayer (Player.update stg)
       |> mapFlyingCat (FlyingCat.update)
       |> calculate port
-      |> addFlyingCatCheck
+      |> andThen addFlyingCatCheck
 
     | AddFlyingCat x ->
       //printfn "AddFlyingCat %A" x

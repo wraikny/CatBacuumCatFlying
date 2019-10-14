@@ -169,7 +169,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
   let textFont = createFont viewSetting.textSize 0
   let largeFont = createFont viewSetting.largeSize 1
 
-  let _, window =
+  let mouse, window =
     Window.create
       (asd.Engine.WindowSize.ToVector2F())
       viewSetting.menuSetting
@@ -199,6 +199,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
                 UI.TextWith(s, largeFont)
               | Text s -> UI.Text s
               | Line -> UI.Rect(viewSetting.lineWidth, 0.8f)
+              | Button(s, f) -> UI.Button(s, f)
             )
 
           if not x then
@@ -269,6 +270,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     uiLayer.AddObject(scoreObj)
     uiLayer.AddObject(fpsText)
     uiLayer.AddObject(window)
+    uiLayer.AddMouseButtonSelecter(mouse, "Mouse")
     longPressArcLayer.AddObject(longPressArc)
 
     this.AddCoroutineAsParallel(seq {

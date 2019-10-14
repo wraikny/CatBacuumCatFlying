@@ -249,6 +249,7 @@ module ViewModel =
     | Text of string
     | Large of string
     | Line
+    | Button of string * (unit -> unit)
 
 
   let view model =
@@ -312,10 +313,22 @@ module ViewModel =
       ]
 
     | GameOverMode ->
+      let levelText = sprintf "レベル: %d" model.game.level
+      let scoreText = sprintf "スコア: %d" model.game.score
       [
         Header "ゲームオーバー"
         Line
-        Text (sprintf "レベル: %d" model.game.level)
-        Text (sprintf "スコア: %d" model.game.score)
-        Text (sprintf "残HP: %f" model.game.hp)
+        Text levelText
+        Text scoreText
+
+        Line
+        Button("ツイートする", fun() ->
+          sprintf "「%s」をプレイしました！\n%s\n%s\n @wraikny"
+            model.setting.title levelText scoreText
+
+          |> sprintf "https://twitter.com/intent/tweet?text=%s"
+          |> System.Diagnostics.Process.Start
+          |> ignore
+        )
+
       ]

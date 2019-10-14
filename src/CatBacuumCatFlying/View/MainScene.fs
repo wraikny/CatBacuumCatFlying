@@ -164,27 +164,33 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     messenger.View
       .Select(view)
       .Add(fun contents ->
-        window.UIContents <-
-          contents |> List.map(function
-            | Title s ->
-              UI.TextWith(s, titleFont)
-            | Header s ->
-              UI.TextWith(s, headerFont)
-            | Large s ->
-              UI.TextWith(s, largeFont)
-            | Text s -> UI.Text s
-            | Line -> UI.Rect(viewSetting.lineWidth, 0.8f)
-          )
+        (window.IsToggleOn, contents.IsEmpty)
+        |> function
+        | true, true ->
+            window.Toggle(false, fun() ->
+              layer.IsUpdated <- true
+              layer.IsDrawn <- true
+            )
+        | x, false ->
+          window.UIContents <-
+            contents |> List.map(function
+              | Title s ->
+                UI.TextWith(s, titleFont)
+              | Header s ->
+                UI.TextWith(s, headerFont)
+              | Large s ->
+                UI.TextWith(s, largeFont)
+              | Text s -> UI.Text s
+              | Line -> UI.Rect(viewSetting.lineWidth, 0.8f)
+            )
 
-        if window.IsToggleOn && contents.IsEmpty then
-          window.Toggle(false, fun() ->
-            layer.IsUpdated <- true
-            layer.IsDrawn <- true
-          )
-        elif not window.IsToggleOn && not contents.IsEmpty then
-          layer.IsUpdated <- false
-          layer.IsDrawn <- false
-          window.Toggle(true)
+          if not x then
+            layer.IsUpdated <- false
+            layer.IsDrawn <- false
+            window.Toggle(true)
+
+        | _, _ -> ()
+          
       )
 
   let scoreObj = new asd.TextObject2D(Font = largeFont)

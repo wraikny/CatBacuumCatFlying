@@ -1,4 +1,4 @@
-﻿module Cbcf.IO
+module Cbcf.IO
 
 open FSharp.Data
 
@@ -23,6 +23,8 @@ let private getTheCatApiAsync (categoryId: int) (limit: int) apiKey =
         "api_key", apiKey
         "format", "json"
         "limit", limit.ToString()
+        "order", "RANDOM"
+        "size", "small"
         "category_ids", categoryId.ToString()
       ],
       headers = [ "Accept", "application/json" ]

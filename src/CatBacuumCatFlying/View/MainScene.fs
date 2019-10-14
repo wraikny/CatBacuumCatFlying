@@ -131,7 +131,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     let hpArea =
       asd.RectF(
         areaX * 0.1f,
-        gameSetting.floorHeight + areaHeight * 0.5f,
+        gameSetting.floorHeight + areaHeight * 0.1f,
         areaX * 0.8f,
         areaHeight * 0.1f
       )
@@ -227,7 +227,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     messenger
       .Add(fun x ->
         if x.mode = GameMode || x.mode = PauseMode then
-          scoreObj.Text <- sprintf "レベル:%d, スコア:%d" x.game.level x.game.score
+          scoreObj.Text <- sprintf "ステージ:%d / スコア:%d" x.game.level x.game.score
 
           let size = scoreObj.Font.HorizontalSize(scoreObj.Text)
           scoreObj.Position <-

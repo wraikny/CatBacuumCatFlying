@@ -313,7 +313,7 @@ module ViewModel =
       ]
 
     | GameOverMode ->
-      let levelText = sprintf "レベル: %d" model.game.level
+      let levelText = sprintf "ステージ: %d" model.game.level
       let scoreText = sprintf "スコア: %d" model.game.score
       [
         Header "ゲームオーバー"
@@ -323,7 +323,10 @@ module ViewModel =
 
         Line
         Button("ツイートする", fun() ->
-          sprintf "「%s」をプレイしました！\n%s\n%s\n @wraikny"
+          sprintf """「%s」をプレイしました！
+%s
+%s
+@wraikny"""
             model.setting.title levelText scoreText
 
           |> sprintf "https://twitter.com/intent/tweet?text=%s"

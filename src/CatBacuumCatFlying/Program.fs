@@ -93,6 +93,8 @@ let main _ =
 
   #if DEBUG
   asd.Engine.File.AddRootDirectory("Resources")
+  #else
+  asd.Engine.File.AddRootPackage("Resources.pack")
   #endif
 
   asd.Engine.ChangeScene(new MainScene(setting, gameSetting, viewSetting))

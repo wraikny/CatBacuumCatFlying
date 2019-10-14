@@ -261,6 +261,7 @@ module ViewModel =
         Text "by wraikny"
         Line
         Text "スペースボタン長押しでスタート"
+        Text "ゲーム操作: スペースボタンのみ / ポーズ: Escボタン"
         Line
         Text "猫: The Cat API, 掃除機: いらすとや"
         Text "フォント: M+"
@@ -334,5 +335,7 @@ module ViewModel =
           |> System.Diagnostics.Process.Start
           |> ignore
         )
+        Line
+        Text "スペースボタン長押しでタイトル"
 
       ]

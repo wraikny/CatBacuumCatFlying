@@ -47,6 +47,7 @@ type GameSetting = {
 
   hp: float32
 
+  scoreDiffPerSec: uint32
   levelScoreStage: uint32
   levelFrameStage: uint32
 } with

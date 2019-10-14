@@ -12,7 +12,7 @@ let setting = {
   title = "Cat Bacuum Cat Flying"
 }
 
-let gameSetting = {
+let gameSetting: GameSetting = {
   areaSize = Vector2.init 1600 900
   playerSize = Vector2.init 256.0f 256.0f
   flyingCatsSize = Vector2.init 128.0f 128.0f
@@ -40,6 +40,7 @@ let gameSetting = {
   generatePerMin = 30.0f, 5.0f
   generateX = 2100.0f
 
+  scoreDiffPerSec = 5u
   levelScoreStage = 100u
   levelFrameStage = 60u * 5u
 }

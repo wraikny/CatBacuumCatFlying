@@ -121,7 +121,8 @@ module GameModel =
     { model with
         count = count
         generateCount = model.generateCount + one
-    } |> ifThen (count % model.setting.levelFrameStage = 0u) GameModel.LevelUp
+        score = if count % 60u = zero then model.score + model.setting.scoreDiffPerSec else model.score
+    } |> ifThen (count % model.setting.levelFrameStage = zero) GameModel.LevelUp
 
 
   let private addFlyingCatCheck (model: GameModel) =

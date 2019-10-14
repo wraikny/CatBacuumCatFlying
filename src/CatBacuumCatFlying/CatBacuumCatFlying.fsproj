@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,6 +6,7 @@
     <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ElmishExt.fs" />
     <Compile Include="Utils.fs" />
     <Compile Include="IO.fs" />
     <Compile Include="Model.fs" />

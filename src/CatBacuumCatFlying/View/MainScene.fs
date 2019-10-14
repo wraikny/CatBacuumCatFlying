@@ -89,8 +89,6 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       DrawingPriority = 3
     )
 
-  //let mutable lastModel = initModel
-
   do
     messenger.View
       .Add(fun x ->
@@ -138,10 +136,6 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
             )
       )
     hpObj.AddDrawnChildWithoutColor(hpBar)
-
-
-      
-      
 
 
   let createFont size outLineSize =

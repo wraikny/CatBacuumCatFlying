@@ -87,31 +87,27 @@ module GameModel =
   let inline private mapFlyingCat f (model: GameModel): GameModel =
     { model with flyingCats = Array.choose f model.flyingCats }
 
-  let inline private calculate (model: GameModel) =
-    let collidedMap =
-      seq {
-        for x in model.flyingCats do
-          if GameObject.inCollision model.player x then
-            yield (x.Key, ())
-      }
-      |> HashMap.ofSeq
+  let inline private calculate (port: Port) (model: GameModel) =
+    let mutable score = zero
+    let mutable hp = zero
 
-    let score, hp =
-      let mutable score = zero
-      let mutable hp = zero
+    let nextFlyingCats = [|
       for x in model.flyingCats do
-        if HashMap.containsKey x.Key collidedMap then
+        if GameObject.inCollision model.player x then
           x.kind |> function
           | Score a -> score <- score + a
           | HP a -> hp <- hp + a
 
-      score, hp
+          port.addEffect(x)
+        else
+          yield x
+    |]
 
     let newScore = model.scoreForLevelStage + score
     let scoreLebelUp = (model.scoreForLevelStage + score) > model.setting.levelScoreStage
 
     { model with
-        flyingCats = model.flyingCats |> Array.filter (fun x -> not <| HashMap.containsKey x.Key collidedMap)
+        flyingCats = nextFlyingCats
         score = score + model.score
         hp = hp + model.hp |> max zero |> min model.setting.hp
         scoreForLevelStage = if scoreLebelUp then zero else newScore
@@ -161,7 +157,7 @@ module GameModel =
     else
       model, Cmd.none
 
-  let update (msg: GameMsg) (model: GameModel) =
+  let update (port: Port) (msg: GameMsg) (model: GameModel) =
     msg |> function
     | Tick ->
       let stg = model.setting
@@ -170,7 +166,7 @@ module GameModel =
       |> countup
       |> mapPlayer (Player.update stg)
       |> mapFlyingCat (FlyingCat.update)
-      |> calculate
+      |> calculate port
       |> addFlyingCatCheck
 
     | AddFlyingCat x ->
@@ -373,7 +369,7 @@ module Model =
       |> Option.defaultValue (model, Cmd.none)
 
     | GameMode, GameMsg m ->
-      model |> chain (GameModel.update m)
+      model |> chain (GameModel.update model.port m)
 
     | GameMode, Push ->
       model |> chain GameModel.push

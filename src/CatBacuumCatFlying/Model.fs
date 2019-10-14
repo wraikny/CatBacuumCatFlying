@@ -176,6 +176,10 @@ type Setting = {
   errorLogPath: string
 }
 
+type Port = {
+  addEffect : FlyingCat -> unit
+}
+
 type Model = {
   setting: Setting
   prevMode: Mode
@@ -186,8 +190,9 @@ type Model = {
   categories: (int * string) []
   categoryIndex: int
 
+  port: Port
 } with
-  static member inline Init(setting, gameSetting, apiKey) = {
+  static member inline Init(setting, gameSetting, apiKey, port) = {
     setting = setting
     prevMode = TitleMode
     mode = TitleMode
@@ -195,6 +200,8 @@ type Model = {
     apiKey = apiKey
     categories = Array.empty
     categoryIndex = 0
+
+    port = port
   }
 
   static member inline Set(model, x) =

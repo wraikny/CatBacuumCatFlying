@@ -68,6 +68,9 @@ let viewSetting = {
 
   longPressFrame = 60
   longPressFrameWait = 30
+
+  hitEffectFrame = 180
+  hitEffectScaleRate = 2.0f
 }
 
 open wraikny.MilleFeuille

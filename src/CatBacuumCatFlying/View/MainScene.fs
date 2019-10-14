@@ -21,6 +21,9 @@ type ViewSetting = {
 
   longPressFrameWait: int
   longPressFrame: int
+
+  hitEffectFrame: int
+  hitEffectScaleRate: float32
 }
 
 
@@ -40,10 +43,16 @@ open Elmish.Reactive
 type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSetting) =
   inherit Scene()
 
+  let hitEffect = new HitEffect(viewSetting.hitEffectScaleRate, viewSetting.hitEffectFrame)
+
   let messenger =
     let apiKey = (IO.Altseed.loadString viewSetting.apiKeyPath).Trim()
 
-    let init() = Logic.Model.init(setting, gameSetting, apiKey)
+    let port = {
+      addEffect = hitEffect.AddEffect
+    }
+
+    let init() = Logic.Model.init(setting, gameSetting, apiKey, port)
 
     Program.mkProgram init Logic.Model.update (fun m _ -> m)
     #if DEBUG
@@ -73,9 +82,15 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     )
 
   let backLayer = new asd.Layer2D()
-  let layer = new asd.Layer2D(IsUpdated = false, IsDrawn = false)
+  let mainLayer = new asd.Layer2D(IsUpdated = false, IsDrawn = false)
+  let effectLayer = new asd.Layer2D(IsUpdated = false, IsDrawn = false)
   let uiLayer = new asd.Layer2D()
   let longPressArcLayer = new asd.Layer2D()
+
+  let gameLayers = [
+    mainLayer
+    effectLayer
+  ]
 
   let player =
     new GameObjectView(DrawingPriority = 2)
@@ -102,7 +117,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
       .Where(fun x -> x.mode = GameMode)
       .Select(fun x ->
         [ for a in x.game.flyingCats -> (a.Key, a.object) ]
-      ).Subscribe(new ActorsUpdater<_, _, _>(layer, fun() -> new FlyingCatView(DrawingPriority = 1)))
+      ).Subscribe(new ActorsUpdater<_, _, _>(mainLayer, fun() -> new FlyingCatView(DrawingPriority = 1)))
       |> ignore
 
     let areaX = float32 gameSetting.areaSize.x
@@ -164,8 +179,10 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
         |> function
         | true, true ->
             window.Toggle(false, fun() ->
-              layer.IsUpdated <- true
-              layer.IsDrawn <- true
+              gameLayers |> iter (fun layer ->
+                layer.IsUpdated <- true
+                layer.IsDrawn <- true
+              )
             )
         | x, false ->
           window.UIContents <-
@@ -181,8 +198,10 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
             )
 
           if not x then
-            layer.IsUpdated <- false
-            layer.IsDrawn <- false
+            gameLayers |> iter(fun layer ->
+              layer.IsUpdated <- false
+              layer.IsDrawn <- false
+            )
             window.Toggle(true)
 
         | _, _ -> ()
@@ -223,17 +242,21 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
   override this.OnRegistered() =
 
     this.AddLayer(backLayer)
-    this.AddLayer(layer)
+    this.AddLayer(mainLayer)
+    this.AddLayer(effectLayer)
     this.AddLayer(uiLayer)
     this.AddLayer(longPressArcLayer)
 
     backLayer.AddObject(background)
     backLayer.AddCamera(gameSetting)
 
-    layer.AddCamera(gameSetting)
-    layer.AddObject(hpObj)
-    layer.AddObject(player)
-    layer.AddObject(bacuumObj)
+    mainLayer.AddCamera(gameSetting)
+    mainLayer.AddObject(hpObj)
+    mainLayer.AddObject(player)
+    mainLayer.AddObject(bacuumObj)
+
+    effectLayer.AddCamera(gameSetting)
+    hitEffect.Attach(effectLayer)
 
     uiLayer.AddObject(scoreObj)
     uiLayer.AddObject(fpsText)

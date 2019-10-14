@@ -15,6 +15,7 @@
     <Compile Include="View\GameObjectView.fs" />
     <Compile Include="View\Window.fs" />
     <Compile Include="View\LongPressCircle.fs" />
+    <Compile Include="View\HitEffect.fs" />
     <Compile Include="View\MainScene.fs" />
     <Compile Include="Program.fs" />
     <None Include="paket.references" />

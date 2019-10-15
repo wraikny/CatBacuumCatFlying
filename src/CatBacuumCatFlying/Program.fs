@@ -53,15 +53,15 @@ let viewSetting = {
   bacuumTexturePath = "robot_soujiki.png"
 
   menuSetting = {
-    frameColor = asd.Color(3, 252, 244, 255)
-    rectColor = asd.Color(66, 164, 245, 255)
+    frameColor = asd.Color(3, 252, 244, 180)
+    rectColor = asd.Color(66, 164, 245, 220)
   
     widthRate = 0.8f
 
     buttonColor = {
-      defaultColor = asd.Color(112, 162, 255, 255)
-      hoverColor = asd.Color(202, 220, 252, 255)
-      holdColor = asd.Color(112, 162, 255, 255)
+      defaultColor = asd.Color(112, 162, 255, 220)
+      hoverColor = asd.Color(202, 220, 252, 220)
+      holdColor = asd.Color(112, 162, 255, 220)
     }
   }
 
@@ -95,7 +95,7 @@ let viewSetting = {
 
   bacuumSE = "sound/vacuum-cleaner-operation1.ogg"
   bacuumVolume = 0.2f
-  bacuumFadeSec = 0.3f
+  bacuumFadeSec = 0.2f
 }
 
 let bgmPath = "sound/FreeBGM_nekomimi.ogg"

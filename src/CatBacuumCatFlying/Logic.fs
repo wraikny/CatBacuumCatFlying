@@ -113,7 +113,10 @@ module GameModel =
         hp = newHp
         scoreForLevelStage = if scoreLebelUp then zero else newScore
     } |> ifThen(scoreLebelUp) GameModel.LevelUp
-    , (if newHp = zero then Cmd.ofMsg(SetMode GameOverMode) else Cmd.none)
+    , (if newHp = zero then
+        port.bacuumOff()
+        Cmd.ofMsg(SetMode GameOverMode)
+      else Cmd.none)
 
 
   let private countup (model: GameModel): GameModel =
@@ -332,6 +335,7 @@ module Model =
       model.port.pause()
       model |> setMode m, Cmd.none
 
+    | PauseMode, SetMode(TitleMode as m) 
     | PauseMode, SetMode(GameMode as m) ->
       model.port.resume()
       model |> setMode m, Cmd.none
@@ -403,15 +407,10 @@ module Model =
       model, Cmd.ofMsg(SetMode GameMode)
 
     | PauseMode, LongPress ->
-      model.port.clear()
-      { model with
-          categoryIndex = zero
-          game = GameModel.Restart(model.game)
-      }
-      , Cmd.ofMsg(SetMode TitleMode)
+      model |> Model.Restart, Cmd.ofMsg(SetMode TitleMode)
 
     | GameOverMode, LongPress ->
-      model, Cmd.ofMsg(SetMode TitleMode)
+      model |> Model.Restart, Cmd.ofMsg(SetMode TitleMode)
 
     | _
       -> model, Cmd.none

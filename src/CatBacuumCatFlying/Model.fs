@@ -224,6 +224,12 @@ type Model = {
   static member inline Set(model, x) =
     { model with game = x }
 
+  static member inline Restart(model) =
+    { model with
+        categoryIndex = zero
+        game = GameModel.Restart(model.game)
+    }
+
 
 type GameMsg =
   | AddFlyingCat of FlyingCat

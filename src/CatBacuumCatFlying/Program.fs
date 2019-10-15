@@ -94,6 +94,9 @@ let viewSetting = {
   }
 }
 
+let bgmPath = "sound/FreeBGM_nekomimi.ogg"
+let bgmVolume = 0.2f
+
 open wraikny.MilleFeuille
 open System.Threading
 
@@ -112,6 +115,11 @@ let main _ =
   #endif
 
   asd.Engine.ChangeScene(new MainScene(setting, gameSetting, viewSetting))
+
+  let bgm = asd.Engine.Sound.CreateSoundSource(bgmPath, false)
+  let bgmId = asd.Engine.Sound.Play(bgm)
+  bgm.IsLoopingMode <- true
+  asd.Engine.Sound.SetVolume(bgmId, bgmVolume)
 
   while asd.Engine.DoEvents() do
     sc.Execute()

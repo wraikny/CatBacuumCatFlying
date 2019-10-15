@@ -185,9 +185,16 @@ type Setting = {
   errorLogPath: string
 }
 
+type F = unit -> unit
+
 type Port = {
   addEffect: FlyingCat -> unit
-  clear: unit -> unit
+  clear: F
+
+  bacuumOn: F
+  bacuumOff: F
+  pause: F
+  resume: F
 }
 
 type Model = {

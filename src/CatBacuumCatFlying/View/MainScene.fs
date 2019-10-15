@@ -23,6 +23,10 @@ type ViewSetting = {
   longPressFrame: int
 
   hitEffect: HitEffectSetting
+
+  bacuumSE: string
+  bacuumVolume: float32
+  bacuumFadeSec: float32
 }
 
 
@@ -39,7 +43,7 @@ open Elmish
 open Elmish.Reactive
 
 
-type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSetting) =
+type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetting: ViewSetting) =
   inherit Scene()
 
   let scoreObj = new asd.TextObject2D(Text = " ")
@@ -48,11 +52,35 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
   let messenger =
     let apiKey = (IO.Altseed.loadString viewSetting.apiKeyPath).Trim()
 
+    let bacuumSE = asd.Engine.Sound.CreateSoundSource(viewSetting.bacuumSE, false)
+    bacuumSE.IsLoopingMode <- true
+    let mutable bacuumSEId = None
+
     let port = {
       addEffect = hitEffect.AddEffect
       clear = fun() ->
         scoreObj.Text <- " "
         hitEffect.Clear()
+
+      bacuumOn = fun() ->
+        let seid = asd.Engine.Sound.Play(bacuumSE)
+        bacuumSEId <- Some seid
+        asd.Engine.Sound.SetVolume(seid, viewSetting.bacuumVolume)
+        asd.Engine.Sound.FadeIn(seid, viewSetting.bacuumFadeSec)
+
+      bacuumOff = fun() ->
+        bacuumSEId |> iter(fun seid ->
+          asd.Engine.Sound.FadeOut(seid, viewSetting.bacuumFadeSec)
+          bacuumSEId <- None
+        )
+
+      pause = fun() ->
+        asd.Engine.Sound.Pause(bgmId)
+        bacuumSEId |> iter asd.Engine.Sound.Pause
+
+      resume = fun() ->
+        asd.Engine.Sound.Resume(bgmId)
+        bacuumSEId |> iter asd.Engine.Sound.Resume
     }
 
     let init() = Logic.Model.init(setting, gameSetting, apiKey, port)

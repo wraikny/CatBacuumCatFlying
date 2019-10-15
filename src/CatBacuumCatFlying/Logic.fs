@@ -267,6 +267,8 @@ module Model =
         printfn "%A" e
     }
 
+  let private setMode mode model =
+    { model with prevMode = model.mode; mode = mode }
 
   let update (msg: Msg) (model: Model) =
     (model.mode, msg) |> function
@@ -324,10 +326,18 @@ module Model =
       outputLog (model.setting.errorLogPath) (string e)
       |> Async.Start
 
-      { model with prevMode = model.mode; mode = m}, Cmd.none
+      model |> setMode m, Cmd.none
+
+    | GameMode, SetMode (PauseMode as m) ->
+      model.port.pause()
+      model |> setMode m, Cmd.none
+
+    | PauseMode, SetMode(GameMode as m) ->
+      model.port.resume()
+      model |> setMode m, Cmd.none
 
     | _, SetMode m ->
-      { model with prevMode = model.mode; mode = m }, Cmd.none
+      model |> setMode m, Cmd.none
 
     | TitleMode, LongPress ->
       model, Cmd.ofMsg(SetMode SelectMode)
@@ -379,9 +389,11 @@ module Model =
       model |> chain (GameModel.update model.port m)
 
     | GameMode, Push ->
+      model.port.bacuumOn()
       model |> chain GameModel.push
 
     | GameMode, Release ->
+      model.port.bacuumOff()
       model |> chain GameModel.release
     
     //| ErrorMode _, LongPress ->

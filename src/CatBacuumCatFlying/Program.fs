@@ -92,6 +92,10 @@ let viewSetting = {
     |]
     volume = 0.3f
   }
+
+  bacuumSE = "sound/vacuum-cleaner-operation1.ogg"
+  bacuumVolume = 0.2f
+  bacuumFadeSec = 0.3f
 }
 
 let bgmPath = "sound/FreeBGM_nekomimi.ogg"
@@ -114,12 +118,13 @@ let main _ =
   asd.Engine.File.AddRootPackage("Resources.pack")
   #endif
 
-  asd.Engine.ChangeScene(new MainScene(setting, gameSetting, viewSetting))
 
   let bgm = asd.Engine.Sound.CreateSoundSource(bgmPath, false)
   let bgmId = asd.Engine.Sound.Play(bgm)
   bgm.IsLoopingMode <- true
   asd.Engine.Sound.SetVolume(bgmId, bgmVolume)
+
+  asd.Engine.ChangeScene(new MainScene(bgmId, setting, gameSetting, viewSetting))
 
   while asd.Engine.DoEvents() do
     sc.Execute()

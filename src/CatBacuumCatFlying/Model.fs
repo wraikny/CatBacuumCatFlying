@@ -159,6 +159,7 @@ type GameModel = {
     }
 
 type Mode =
+  | CreditMode
   | TitleMode
   | SelectMode
   | WaitingMode
@@ -168,6 +169,7 @@ type Mode =
   | ErrorMode of exn
 with
   member x.EnabledLongPress = x |> function
+    | CreditMode
     | GameMode
     | WaitingMode
     | ErrorMode _
@@ -252,19 +254,37 @@ module ViewModel =
     | Line
     | Button of string * (unit -> unit)
 
+  let view model dispatch =
+    let urlButton text (url: string) =
+      Button(text, fun() ->
+        url
+        |> System.Diagnostics.Process.Start
+        |> ignore
+      )
 
-  let view model =
+    let msgButton text msg =
+      Button(text, fun() -> dispatch msg)
+
     model.mode |> function
+    | CreditMode ->
+      [
+        Title "クレジット"
+        Line
+        urlButton "猫: The Cat API" "https://thecatapi.com"
+        urlButton "掃除機: いらすとや" "https://www.irasutoya.com/"
+        urlButton "フォント: M+" "https://mplus-fonts.osdn.jp/"
+        urlButton "効果音素材：ポケットサウンド" "https://pocket-se.info"
+        Button("タイトルに戻る", fun() -> dispatch <| SetMode TitleMode)
+      ]
+
     | TitleMode ->
       [
         Title model.setting.title
         Text "by wraikny"
         Line
-        Text "スペースボタン長押しでスタート"
-        Text "ゲーム操作: スペースボタンのみ / ポーズ: Escボタン"
-        Line
-        Text "猫: The Cat API, 掃除機: いらすとや"
-        Text "フォント: M+"
+        Text "ゲーム操作: スペース / ポーズ: Esc"
+        msgButton "ゲームスタート(スペース長押し)" <| SetMode SelectMode
+        msgButton "クレジットを開く" <| SetMode CreditMode
       ]
 
     | SelectMode ->
@@ -324,7 +344,7 @@ module ViewModel =
         Text scoreText
 
         Line
-        Button("ツイートする", fun() ->
+        urlButton "ツイートする" (
           sprintf """「%s」をプレイしました！
 %s
 %s
@@ -332,8 +352,6 @@ module ViewModel =
             model.setting.title levelText scoreText
           |> System.Web.HttpUtility.UrlEncode
           |> sprintf "https://twitter.com/intent/tweet?text=%s"
-          |> System.Diagnostics.Process.Start
-          |> ignore
         )
         Line
         Text "スペースボタン長押しでタイトル"

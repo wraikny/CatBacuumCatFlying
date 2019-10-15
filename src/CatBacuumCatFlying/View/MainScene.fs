@@ -22,8 +22,7 @@ type ViewSetting = {
   longPressFrameWait: int
   longPressFrame: int
 
-  hitEffectFrame: int
-  hitEffectScaleRate: float32
+  hitEffect: HitEffectSetting
 }
 
 
@@ -44,7 +43,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
   inherit Scene()
 
   let scoreObj = new asd.TextObject2D(Text = " ")
-  let hitEffect = new HitEffect(viewSetting.hitEffectScaleRate, viewSetting.hitEffectFrame)
+  let hitEffect = new HitEffect(viewSetting.hitEffect)
 
   let messenger =
     let apiKey = (IO.Altseed.loadString viewSetting.apiKeyPath).Trim()
@@ -177,7 +176,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
 
   do
     messenger
-      .Select(view)
+      .Select(fun model -> view model messenger.Dispatch)
       .Add(fun contents ->
         (window.IsToggleOn, contents.IsEmpty)
         |> function

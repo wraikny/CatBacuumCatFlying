@@ -76,8 +76,22 @@ let viewSetting = {
   longPressFrame = 60
   longPressFrameWait = 30
 
-  hitEffectFrame = 240
-  hitEffectScaleRate = 3.0f
+
+  hitEffect = {
+    frame = 240
+    scaleDiff = 3.0f
+
+    files = [|
+      "sound/cat18.ogg"
+      "sound/cat16.ogg"
+      "sound/cat15.ogg"
+      "sound/cat10.ogg"
+      "sound/cat7.ogg"
+      "sound/cat5.ogg"
+      "sound/ubaiai.ogg"
+    |]
+    volume = 0.3f
+  }
 }
 
 open wraikny.MilleFeuille

@@ -9,7 +9,16 @@ open Affogato.Helper
 open wraikny.MilleFeuille
 open wraikny.MilleFeuille.Updater
 
-type HitEffect(scaleDiff: float32, frame) =
+type HitEffectSetting = {
+  scaleDiff: float32
+  frame: int
+
+  volume: float32
+  files: string []
+}
+
+
+type HitEffect(setting: HitEffectSetting) =
   inherit Layer2DComponent<asd.Layer2D>("HitEffect")
 
   let alpha = 200
@@ -26,6 +35,8 @@ type HitEffect(scaleDiff: float32, frame) =
     obj.IsUpdated <- false
     obj.IsDrawn <- false
     objs.Remove(obj) |> ignore
+
+  let rand = System.Random()
 
   member __.Clear() =
     for x in objs.ToArray() do
@@ -66,14 +77,22 @@ type HitEffect(scaleDiff: float32, frame) =
     obj.Scale <- scale
 
     obj.AddCoroutineAsParallel(seq {
-      for i in 1..frame ->
-        let a = Easing.calculate Easing.OutSine frame i
-        obj.Scale <- scale + asd.Vector2DF(1.0f, 1.0f) * scaleDiff * a
+      for i in 1..setting.frame ->
+        let a = Easing.calculate Easing.OutSine setting.frame i
+        obj.Scale <- scale + asd.Vector2DF(1.0f, 1.0f) * setting.scaleDiff * a
 
-        let b = Easing.calculate Easing.InSine frame i
+        let b = Easing.calculate Easing.InSine setting.frame i
         obj.Color <- asd.Color(255, 255, 255, int <| (1.0f - b) * (float32 alpha))
 
       reset(obj)
       yield()
 
     })
+    
+    let i = rand.Next(0, setting.files.Length)
+    let se = asd.Engine.Sound.CreateSoundSource(setting.files.[i], true)
+
+    let seId = asd.Engine.Sound.Play(se)
+    asd.Engine.Sound.SetVolume(seId, setting.volume)
+
+    ()

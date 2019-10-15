@@ -113,6 +113,7 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
     )
 
   let backLayer = new asd.Layer2D()
+
   let mainLayer = new asd.Layer2D(IsUpdated = false, IsDrawn = false)
   let effectLayer = new asd.Layer2D(IsUpdated = false, IsDrawn = false)
   let uiLayer = new asd.Layer2D()
@@ -276,13 +277,13 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
     messenger.Run()
 
   override this.OnRegistered() =
-
     this.AddLayer(backLayer)
     this.AddLayer(mainLayer)
     this.AddLayer(effectLayer)
     this.AddLayer(uiLayer)
     this.AddLayer(longPressArcLayer)
 
+    backLayer.AddPostEffect(new NijiPostEffect())
     backLayer.AddObject(background)
     backLayer.AddCamera(gameSetting)
 

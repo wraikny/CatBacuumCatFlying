@@ -44,7 +44,7 @@ uniform vec2 g_resolution;
 uniform float g_second;
 
 vec3 hsv2rgb(float h, float s, float v) {
-  return ((clamp(abs(fract(h+float3(0,2,1)/3.)*6.-3.)-1.,0.,1.)-1.)*s+1.)*v;
+  return ((clamp(abs(fract(h+vec3(0,2,1)/3.)*6.-3.)-1.,0.,1.)-1.)*s+1.)*v;
 }
 
 in vec4 inPosition;
@@ -56,7 +56,7 @@ vec3 main_() {
     vec2 cdn = floor(position * vec2(g_N, g_N));
     float index = (cdn.x - 1.0) + cdn.y + g_second * g_speed;
 
-    float h = fmod(index / g_interval, 1.0);
+    float h = mod(index / g_interval, 1.0);
     vec3 col = hsv2rgb(h, 1.0, 1.0);
     return col;
 }

@@ -113,7 +113,10 @@ module GameModel =
         hp = newHp
         scoreForLevelStage = if scoreLebelUp then zero else newScore
     } |> ifThen(scoreLebelUp) GameModel.LevelUp
-    , (if newHp = zero then Cmd.ofMsg(SetMode GameOverMode) else Cmd.none)
+    , (if newHp = zero then
+        port.bacuumOff()
+        Cmd.ofMsg(SetMode GameOverMode)
+      else Cmd.none)
 
 
   let private countup (model: GameModel): GameModel =
@@ -267,6 +270,8 @@ module Model =
         printfn "%A" e
     }
 
+  let private setMode mode model =
+    { model with prevMode = model.mode; mode = mode }
 
   let update (msg: Msg) (model: Model) =
     (model.mode, msg) |> function
@@ -324,10 +329,19 @@ module Model =
       outputLog (model.setting.errorLogPath) (string e)
       |> Async.Start
 
-      { model with prevMode = model.mode; mode = m}, Cmd.none
+      model |> setMode m, Cmd.none
+
+    | GameMode, SetMode (PauseMode as m) ->
+      model.port.pause()
+      model |> setMode m, Cmd.none
+
+    | PauseMode, SetMode(TitleMode as m) 
+    | PauseMode, SetMode(GameMode as m) ->
+      model.port.resume()
+      model |> setMode m, Cmd.none
 
     | _, SetMode m ->
-      { model with prevMode = model.mode; mode = m }, Cmd.none
+      model |> setMode m, Cmd.none
 
     | TitleMode, LongPress ->
       model, Cmd.ofMsg(SetMode SelectMode)
@@ -379,9 +393,11 @@ module Model =
       model |> chain (GameModel.update model.port m)
 
     | GameMode, Push ->
+      model.port.bacuumOn()
       model |> chain GameModel.push
 
     | GameMode, Release ->
+      model.port.bacuumOff()
       model |> chain GameModel.release
     
     //| ErrorMode _, LongPress ->
@@ -391,22 +407,10 @@ module Model =
       model, Cmd.ofMsg(SetMode GameMode)
 
     | PauseMode, LongPress ->
-      model.port.clear()
-      { model with
-          categoryIndex = zero
-          game = GameModel.Restart(model.game)
-      }
-      , Cmd.ofMsg(SetMode TitleMode)
+      model |> Model.Restart, Cmd.ofMsg(SetMode TitleMode)
 
     | GameOverMode, LongPress ->
-      model, Cmd.ofMsg(SetMode TitleMode)
+      model |> Model.Restart, Cmd.ofMsg(SetMode TitleMode)
 
-    | PauseMode, _
-    | TitleMode, _
-    | SelectMode, _
-    | GameMode, _
-    | _, SetCategories _
-    | WaitingMode, _
-    | GameOverMode, _
-    | ErrorMode _, _
+    | _
       -> model, Cmd.none

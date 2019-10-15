@@ -53,15 +53,15 @@ let viewSetting = {
   bacuumTexturePath = "robot_soujiki.png"
 
   menuSetting = {
-    frameColor = asd.Color(3, 252, 244, 255)
-    rectColor = asd.Color(66, 164, 245, 255)
+    frameColor = asd.Color(3, 252, 244, 180)
+    rectColor = asd.Color(66, 164, 245, 220)
   
     widthRate = 0.8f
 
     buttonColor = {
-      defaultColor = asd.Color(112, 162, 255, 255)
-      hoverColor = asd.Color(202, 220, 252, 255)
-      holdColor = asd.Color(112, 162, 255, 255)
+      defaultColor = asd.Color(112, 162, 255, 220)
+      hoverColor = asd.Color(202, 220, 252, 220)
+      holdColor = asd.Color(112, 162, 255, 220)
     }
   }
 
@@ -76,9 +76,30 @@ let viewSetting = {
   longPressFrame = 60
   longPressFrameWait = 30
 
-  hitEffectFrame = 240
-  hitEffectScaleRate = 3.0f
+
+  hitEffect = {
+    frame = 240
+    scaleDiff = 3.0f
+
+    files = [|
+      "sound/cat18.ogg"
+      "sound/cat16.ogg"
+      "sound/cat15.ogg"
+      "sound/cat10.ogg"
+      "sound/cat7.ogg"
+      "sound/cat5.ogg"
+      "sound/ubaiai.ogg"
+    |]
+    volume = 0.3f
+  }
+
+  bacuumSE = "sound/vacuum-cleaner-operation1.ogg"
+  bacuumVolume = 0.2f
+  bacuumFadeSec = 0.2f
 }
+
+let bgmPath = "sound/FreeBGM_nekomimi.ogg"
+let bgmVolume = 0.2f
 
 open wraikny.MilleFeuille
 open System.Threading
@@ -97,7 +118,13 @@ let main _ =
   asd.Engine.File.AddRootPackage("Resources.pack")
   #endif
 
-  asd.Engine.ChangeScene(new MainScene(setting, gameSetting, viewSetting))
+
+  let bgm = asd.Engine.Sound.CreateSoundSource(bgmPath, false)
+  let bgmId = asd.Engine.Sound.Play(bgm)
+  bgm.IsLoopingMode <- true
+  asd.Engine.Sound.SetVolume(bgmId, bgmVolume)
+
+  asd.Engine.ChangeScene(new MainScene(bgmId, setting, gameSetting, viewSetting))
 
   while asd.Engine.DoEvents() do
     sc.Execute()

@@ -158,7 +158,10 @@ type GameModel = {
           uint32 <| 3600.0f / (pmi + (float32 level) * pmd)
     }
 
+type CreditPage = One | Two
+
 type Mode =
+  | CreditMode of CreditPage
   | TitleMode
   | SelectMode
   | WaitingMode
@@ -168,6 +171,7 @@ type Mode =
   | ErrorMode of exn
 with
   member x.EnabledLongPress = x |> function
+    | CreditMode _
     | GameMode
     | WaitingMode
     | ErrorMode _
@@ -183,9 +187,16 @@ type Setting = {
   errorLogPath: string
 }
 
+type F = unit -> unit
+
 type Port = {
   addEffect: FlyingCat -> unit
-  clear: unit -> unit
+  clear: F
+
+  bacuumOn: F
+  bacuumOff: F
+  pause: F
+  resume: F
 }
 
 type Model = {
@@ -214,6 +225,12 @@ type Model = {
 
   static member inline Set(model, x) =
     { model with game = x }
+
+  static member inline Restart(model) =
+    { model with
+        categoryIndex = zero
+        game = GameModel.Restart(model.game)
+    }
 
 
 type GameMsg =
@@ -252,24 +269,53 @@ module ViewModel =
     | Line
     | Button of string * (unit -> unit)
 
+  let private urlButton text (url: string) =
+    Button(text, fun() ->
+      url
+      |> System.Diagnostics.Process.Start
+      |> ignore
+    )
+  let view model dispatch =
 
-  let view model =
+    let inline msgButton text msg =
+      Button(text, fun() -> dispatch msg)
+
     model.mode |> function
+    | CreditMode page ->
+      [
+        yield Title "クレジット"
+        match page with
+        | One -> yield! [
+            urlButton "作者: wraikny" "https://twitter.com/wraikny"
+            urlButton "ゲームエンジン: Altseed" "http://altseed.github.io/"
+            urlButton "猫: The Cat API" "https://thecatapi.com"
+            urlButton "フォント: M+ FONTS" "https://mplus-fonts.osdn.jp/"
+            Line
+            msgButton "次へ" <| SetMode (CreditMode Two)
+          ]
+        | Two -> yield! [
+            urlButton "掃除機: いらすとや" "https://www.irasutoya.com/"
+            urlButton "効果音素材: ポケットサウンド" "https://pocket-se.info"
+            urlButton "BGM: d-elf.com" "https://www.d-elf.com/"
+            Line
+            msgButton "タイトルに戻る" <| SetMode TitleMode
+        ]
+      ]
+
     | TitleMode ->
       [
         Title model.setting.title
         Text "by wraikny"
         Line
-        Text "スペースボタン長押しでスタート"
+        Text "ゲーム操作: スペース / ポーズ: Esc"
+        msgButton "ゲームスタート(スペース長押し)" <| SetMode SelectMode
         Line
-        Text "猫: The Cat API, 掃除機: いらすとや"
-        Text "フォント: M+"
+        msgButton "クレジットを開く" <| SetMode (CreditMode One)
       ]
 
     | SelectMode ->
       [
         yield Header "モードセレクト"
-        yield Line
         if model.categories.Length = 0 then
           yield Text "データをダウンロード中..."
           yield Text "セキュリティソフトによって処理が一時停止する場合があります"
@@ -291,7 +337,6 @@ module ViewModel =
     | WaitingMode ->
       [
         Header "画像をダウンロード中..."
-        Line
         Text "セキュリティソフトによって処理が一時停止する場合があります"
         Text "しばらくお待ち下さい"
       ]
@@ -308,7 +353,6 @@ module ViewModel =
     | PauseMode ->
       [
         Header "ポーズ"
-        Line
         Text "スペース/Escボタンでコンティニュー"
         Text "スペースボタン長押しでタイトル"
       ]
@@ -318,12 +362,11 @@ module ViewModel =
       let scoreText = sprintf "スコア: %d" model.game.score
       [
         Header "ゲームオーバー"
-        Line
         Text levelText
         Text scoreText
 
         Line
-        Button("ツイートする", fun() ->
+        urlButton "ツイートする" (
           sprintf """「%s」をプレイしました！
 %s
 %s
@@ -331,8 +374,8 @@ module ViewModel =
             model.setting.title levelText scoreText
           |> System.Web.HttpUtility.UrlEncode
           |> sprintf "https://twitter.com/intent/tweet?text=%s"
-          |> System.Diagnostics.Process.Start
-          |> ignore
         )
+        Line
+        Text "スペースボタン長押しでタイトル"
 
       ]

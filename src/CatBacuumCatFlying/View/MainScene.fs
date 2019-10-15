@@ -22,8 +22,11 @@ type ViewSetting = {
   longPressFrameWait: int
   longPressFrame: int
 
-  hitEffectFrame: int
-  hitEffectScaleRate: float32
+  hitEffect: HitEffectSetting
+
+  bacuumSE: string
+  bacuumVolume: float32
+  bacuumFadeSec: float32
 }
 
 
@@ -40,20 +43,44 @@ open Elmish
 open Elmish.Reactive
 
 
-type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSetting) =
+type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetting: ViewSetting) =
   inherit Scene()
 
   let scoreObj = new asd.TextObject2D(Text = " ")
-  let hitEffect = new HitEffect(viewSetting.hitEffectScaleRate, viewSetting.hitEffectFrame)
+  let hitEffect = new HitEffect(viewSetting.hitEffect)
 
   let messenger =
     let apiKey = (IO.Altseed.loadString viewSetting.apiKeyPath).Trim()
+
+    let bacuumSE = asd.Engine.Sound.CreateSoundSource(viewSetting.bacuumSE, false)
+    bacuumSE.IsLoopingMode <- true
+    let mutable bacuumSEId = None
 
     let port = {
       addEffect = hitEffect.AddEffect
       clear = fun() ->
         scoreObj.Text <- " "
         hitEffect.Clear()
+
+      bacuumOn = fun() ->
+        let seid = asd.Engine.Sound.Play(bacuumSE)
+        bacuumSEId <- Some seid
+        asd.Engine.Sound.SetVolume(seid, viewSetting.bacuumVolume)
+        asd.Engine.Sound.FadeIn(seid, viewSetting.bacuumFadeSec)
+
+      bacuumOff = fun() ->
+        bacuumSEId |> iter(fun seid ->
+          asd.Engine.Sound.FadeOut(seid, viewSetting.bacuumFadeSec)
+          bacuumSEId <- None
+        )
+
+      pause = fun() ->
+        asd.Engine.Sound.Pause(bgmId)
+        bacuumSEId |> iter asd.Engine.Sound.Pause
+
+      resume = fun() ->
+        asd.Engine.Sound.Resume(bgmId)
+        bacuumSEId |> iter asd.Engine.Sound.Resume
     }
 
     let init() = Logic.Model.init(setting, gameSetting, apiKey, port)
@@ -86,6 +113,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     )
 
   let backLayer = new asd.Layer2D()
+
   let mainLayer = new asd.Layer2D(IsUpdated = false, IsDrawn = false)
   let effectLayer = new asd.Layer2D(IsUpdated = false, IsDrawn = false)
   let uiLayer = new asd.Layer2D()
@@ -177,7 +205,7 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
 
   do
     messenger
-      .Select(view)
+      .Select(fun model -> view model messenger.Dispatch)
       .Add(fun contents ->
         (window.IsToggleOn, contents.IsEmpty)
         |> function
@@ -249,13 +277,13 @@ type MainScene(setting: Setting, gameSetting: GameSetting, viewSetting: ViewSett
     messenger.Run()
 
   override this.OnRegistered() =
-
     this.AddLayer(backLayer)
     this.AddLayer(mainLayer)
     this.AddLayer(effectLayer)
     this.AddLayer(uiLayer)
     this.AddLayer(longPressArcLayer)
 
+    backLayer.AddPostEffect(new NijiPostEffect())
     backLayer.AddObject(background)
     backLayer.AddCamera(gameSetting)
 

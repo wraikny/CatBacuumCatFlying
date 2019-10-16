@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,10 +6,12 @@
     <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <Compile Include="Elmish.Reactive.fs" />
     <Compile Include="Utils.fs" />
     <Compile Include="IO.fs" />
     <Compile Include="Model.fs" />
+    <Compile Include="ViewModel.fs" />
     <Compile Include="Logic.fs" />
     <Compile Include="View\NijiPostEffect.fs" />
     <Compile Include="View\Camera.fs" />

@@ -11,11 +11,9 @@ type GameObjectView() =
 
   let textureView = new asd.TextureObject2D()
   let rect = new asd.RectangleShape()
-  //let sizeView = new asd.GeometryObject2D(Shape = rect, Color = asd.Color(0, 250, 0, 50))
 
   do
     base.AddDrawnChildWithAll(textureView)
-    //base.AddDrawnChildWithoutColor(sizeView)
 
   let lastPos: float32 Vector2 ref = ref zero
   let lastSize: float32 Vector2 ref = ref zero
@@ -53,22 +51,23 @@ type GameObjectView() =
       )
 
     update lastPath x.imagePath <| fun x ->
-      if x <> null && System.IO.File.Exists(x) then
+      if x <> null && asd.Engine.File.Exists(x) then
         this.Texture <- asd.Engine.Graphics.CreateTexture2D(x)
+
+
+type PlayerView() =
+  inherit GameObjectView()
 
   interface IUpdatee<GameObject> with
     member this.Update(x) = this.Update(x)
 
 
+
 type FlyingCatView() =
   inherit GameObjectView()
+
+  let mutable lastKind = None
 
   interface IUpdatee<FlyingCat> with
     member this.Update(x) =
       base.Update(x.object)
-
-      let color = x.kind |> function
-        | HP x when x > 0.0f -> asd.Color(0, 255, 0, 255)
-        | HP _ -> asd.Color(255, 0, 0, 255)
-        | Score _ -> asd.Color(0, 0, 255, 255)
-      this.Color <- color

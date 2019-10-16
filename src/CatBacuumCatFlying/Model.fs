@@ -50,6 +50,9 @@ type GameSetting = {
   scoreDiffPerSec: uint32
   levelScoreStage: uint32
   levelFrameStage: uint32
+
+  medicalImagePath: string
+  coinImagePath: string
 } with
   member inline x.PlayerInitPosition =
     let ps = x.playerSize
@@ -116,8 +119,6 @@ type GameModel = {
   imagePaths: Map<int, string []>
   category: int
 } with
-  //member inline x.Speeds =
-  //  x.setting.initSpeeds + (float32 x.level) *. x.setting.diffSpeeds
 
   static member inline Init(setting) = {
     category = zero
@@ -189,14 +190,22 @@ type Setting = {
 
 type F = unit -> unit
 
+type SEKind =
+  | Medical
+  | Coin
+  | Enter
+  | Click
+
 type Port = {
   addEffect: FlyingCat -> unit
   clear: F
 
-  bacuumOn: F
-  bacuumOff: F
+  toggleBacuum: bool -> unit
+
   pause: F
   resume: F
+
+  playSE: SEKind -> unit
 }
 
 type Model = {
@@ -252,130 +261,3 @@ type Msg =
 with
   static member inline Tick = GameMsg Tick
   static member inline AddFlyingCat x = GameMsg <| AddFlyingCat x
-
-
-//type Port =
-//  | LoadCatsCache of (int * string) []
-//  | SelectedCategory of (((int * string []) -> unit) -> Async<unit>)
-//  | OutputLog of filepath:string * string
-
-
-module ViewModel =
-  type UI =
-    | Title of string
-    | Header of string
-    | Text of string
-    | Large of string
-    | Line
-    | Button of string * (unit -> unit)
-
-  let private urlButton text (url: string) =
-    Button(text, fun() ->
-      url
-      |> System.Diagnostics.Process.Start
-      |> ignore
-    )
-  let view model dispatch =
-
-    let inline msgButton text msg =
-      Button(text, fun() -> dispatch msg)
-
-    model.mode |> function
-    | CreditMode page ->
-      [
-        yield Title "クレジット"
-        match page with
-        | One -> yield! [
-            urlButton "作者: wraikny" "https://twitter.com/wraikny"
-            urlButton "ゲームエンジン: Altseed" "http://altseed.github.io/"
-            urlButton "猫: The Cat API" "https://thecatapi.com"
-            urlButton "フォント: M+ FONTS" "https://mplus-fonts.osdn.jp/"
-            Line
-            msgButton "次へ" <| SetMode (CreditMode Two)
-          ]
-        | Two -> yield! [
-            urlButton "掃除機: いらすとや" "https://www.irasutoya.com/"
-            urlButton "効果音素材: ポケットサウンド" "https://pocket-se.info"
-            urlButton "BGM: d-elf.com" "https://www.d-elf.com/"
-            Line
-            msgButton "タイトルに戻る" <| SetMode TitleMode
-        ]
-      ]
-
-    | TitleMode ->
-      [
-        Title model.setting.title
-        Text "by wraikny"
-        Line
-        Text "ゲーム操作: スペース / ポーズ: Esc"
-        msgButton "ゲームスタート(スペース長押し)" <| SetMode SelectMode
-        Line
-        msgButton "クレジットを開く" <| SetMode (CreditMode One)
-      ]
-
-    | SelectMode ->
-      [
-        yield Header "モードセレクト"
-        if model.categories.Length = 0 then
-          yield Text "データをダウンロード中..."
-          yield Text "セキュリティソフトによって処理が一時停止する場合があります"
-        else
-          let len = model.categories.Length
-          let createItem i =
-             model.categories.[(model.categoryIndex + i + len) % len]
-             |> snd
-
-          yield Text <| createItem -1
-          yield Large <| createItem 0
-          yield Text <| createItem 1
-          
-          yield! [
-            Line
-            Text "スペースボタンで変更 / 長押しで決定"
-          ]
-      ]
-    | WaitingMode ->
-      [
-        Header "画像をダウンロード中..."
-        Text "セキュリティソフトによって処理が一時停止する場合があります"
-        Text "しばらくお待ち下さい"
-      ]
-    | GameMode -> []
-    | ErrorMode e ->
-      [
-        Text <| e.GetType().ToString()
-        Text <| e.Message
-        Line
-        Text "スタッフ/製作者に教えてもらえると嬉しいです"
-        Text (sprintf "ログファイルは'%s'に出力されます" model.setting.errorLogPath)
-      ]
-
-    | PauseMode ->
-      [
-        Header "ポーズ"
-        Text "スペース/Escボタンでコンティニュー"
-        Text "スペースボタン長押しでタイトル"
-      ]
-
-    | GameOverMode ->
-      let levelText = sprintf "ステージ: %d" model.game.level
-      let scoreText = sprintf "スコア: %d" model.game.score
-      [
-        Header "ゲームオーバー"
-        Text levelText
-        Text scoreText
-
-        Line
-        urlButton "ツイートする" (
-          sprintf """「%s」をプレイしました！
-%s
-%s
-@wraikny"""
-            model.setting.title levelText scoreText
-          |> System.Web.HttpUtility.UrlEncode
-          |> sprintf "https://twitter.com/intent/tweet?text=%s"
-        )
-        Line
-        Text "スペースボタン長押しでタイトル"
-
-      ]

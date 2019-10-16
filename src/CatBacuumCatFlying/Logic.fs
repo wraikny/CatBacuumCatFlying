@@ -95,10 +95,18 @@ module GameModel =
       for x in model.flyingCats do
         if GameObject.inCollision model.player x then
           x.kind |> function
-          | Score a -> score <- score + a
-          | HP a -> hp <- hp + a
+          | Score a ->
+            score <- score + a
+            port.playSE(Coin)
 
-          port.addEffect(x)
+          | HP a ->
+            hp <- hp + a
+
+            if a <= 0.0f then
+              port.addEffect(x)
+            else
+              port.playSE(Medical)
+
         else
           yield x
     |]
@@ -114,7 +122,7 @@ module GameModel =
         scoreForLevelStage = if scoreLebelUp then zero else newScore
     } |> ifThen(scoreLebelUp) GameModel.LevelUp
     , (if newHp = zero then
-        port.bacuumOff()
+        port.toggleBacuum(false)
         Cmd.ofMsg(SetMode GameOverMode)
       else Cmd.none)
 
@@ -149,17 +157,24 @@ module GameModel =
           let b = stg.floorHeight - size.y
           (float32 <| Random.rand.NextDouble()) * (b - a) + a
 
-        let currentPaths =
-          model.imagePaths
-          |> Map.tryFind model.category
-          |> Option.defaultValue empty
-        let imageIndex = Random.rand.Next(0, currentPaths.Length)
 
         let pos = Vector2.init stg.generateX (float32 posY)
 
+        let imagePath = kind |> function
+          | HP a when a <= zero ->
+            let currentPaths =
+              model.imagePaths
+              |> Map.tryFind model.category
+              |> Option.defaultValue empty
+            let imageIndex = Random.rand.Next(0, currentPaths.Length)
+            currentPaths.[imageIndex]
+
+          | HP _ -> model.setting.medicalImagePath
+          | Score _ -> model.setting.coinImagePath
+
         Msg.AddFlyingCat {
           kind = kind
-          object = GameObject.Init(model.nextId, pos, size, Vector2.init -model.speeds.flyingCatsSpeed 0.0f, currentPaths.[imageIndex])
+          object = GameObject.Init(model.nextId, pos, size, Vector2.init -model.speeds.flyingCatsSpeed 0.0f, imagePath)
         }
         |> Cmd.ofMsg
       )
@@ -183,7 +198,6 @@ module GameModel =
       |> andThen addFlyingCatCheck
 
     | AddFlyingCat x ->
-      //printfn "AddFlyingCat %A" x
       { model with
           flyingCats = Array.append model.flyingCats [|x|]
       }, Cmd.none
@@ -249,15 +263,6 @@ module Model =
         printfn "%A" e
     }
 
-  //let selectedCategory f dispatch =
-  //  async {
-  //    try
-  //      do! f (AddImagePaths >> dispatch)
-  //      printfn "finished selectedcategory"
-  //    with e ->
-  //      printfn "%A" e
-  //  }
-
   let logfileLock = System.Object()
 
   let outputLog filepath t =
@@ -274,6 +279,12 @@ module Model =
     { model with prevMode = model.mode; mode = mode }
 
   let update (msg: Msg) (model: Model) =
+    
+    msg |> function
+    | SetMode _ ->
+      model.port.playSE(Enter)
+    | _ -> ()
+    
     (model.mode, msg) |> function
     | _, AddImagePaths (c, ss) ->
       let xs =
@@ -287,13 +298,12 @@ module Model =
       { model with
           game = { model.game with imagePaths = newMap }
       }, (
-        //let ps = newMap |> Map.find (fst model.categories.[model.categoryIndex])
         if model.mode = WaitingMode then
           Cmd.ofMsg(SetMode GameMode)
         else Cmd.none
       )
 
-    | _, SetMode SelectMode ->
+    | _, SetMode SelectMode when Array.isEmpty model.categories ->
       { model with prevMode = model.mode; mode = SelectMode }
       , async {
         let! child =
@@ -355,7 +365,8 @@ module Model =
           categories = categories
       }, Cmd.ofSub sub
 
-    | SelectMode, Release when model.categories.Length > 0 ->
+    | SelectMode, Push when model.categories.Length > 0 ->
+      model.port.playSE(Click)
       { model with
           categoryIndex =
             (model.categoryIndex + one) % model.categories.Length
@@ -393,15 +404,12 @@ module Model =
       model |> chain (GameModel.update model.port m)
 
     | GameMode, Push ->
-      model.port.bacuumOn()
+      model.port.toggleBacuum(true)
       model |> chain GameModel.push
 
     | GameMode, Release ->
-      model.port.bacuumOff()
+      model.port.toggleBacuum(false)
       model |> chain GameModel.release
-    
-    //| ErrorMode _, LongPress ->
-    //  model, Cmd.ofMsg(SetMode model.prevMode)
 
     | PauseMode, Release ->
       model, Cmd.ofMsg(SetMode GameMode)

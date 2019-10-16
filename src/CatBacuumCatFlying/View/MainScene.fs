@@ -17,6 +17,7 @@ type ViewSetting = {
   headerSize: int
   largeSize: int
   textSize: int
+  smallTextSize: int
   lineWidth: float32
 
   longPressFrameWait: int
@@ -27,6 +28,11 @@ type ViewSetting = {
   bacuumSE: string
   bacuumVolume: float32
   bacuumFadeSec: float32
+
+  medicalSE: string
+  coinSE: string
+  enterSE: string
+  clickSE: string
 }
 
 
@@ -62,17 +68,18 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
         scoreObj.Text <- " "
         hitEffect.Clear()
 
-      bacuumOn = fun() ->
-        let seid = asd.Engine.Sound.Play(bacuumSE)
-        bacuumSEId <- Some seid
-        asd.Engine.Sound.SetVolume(seid, viewSetting.bacuumVolume)
-        asd.Engine.Sound.FadeIn(seid, viewSetting.bacuumFadeSec)
+      toggleBacuum = function
+        | true ->
+          let seid = asd.Engine.Sound.Play(bacuumSE)
+          bacuumSEId <- Some seid
+          asd.Engine.Sound.SetVolume(seid, viewSetting.bacuumVolume)
+          asd.Engine.Sound.FadeIn(seid, viewSetting.bacuumFadeSec)
 
-      bacuumOff = fun() ->
-        bacuumSEId |> iter(fun seid ->
-          asd.Engine.Sound.FadeOut(seid, viewSetting.bacuumFadeSec)
-          bacuumSEId <- None
-        )
+        | false ->
+          bacuumSEId |> iter(fun seid ->
+            asd.Engine.Sound.FadeOut(seid, viewSetting.bacuumFadeSec)
+            bacuumSEId <- None
+          )
 
       pause = fun() ->
         asd.Engine.Sound.Pause(bgmId)
@@ -81,6 +88,23 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
       resume = fun() ->
         asd.Engine.Sound.Resume(bgmId)
         bacuumSEId |> iter asd.Engine.Sound.Resume
+
+      //playSE = fun path ->
+      //  let source = asd.Engine.Sound.CreateSoundSource(path, true)
+      //  let id = asd.Engine.Sound.Play
+      //  ()
+      playSE = fun kind ->
+        let inline play path =
+          asd.Engine.Sound.CreateSoundSource(path, true)
+          |> asd.Engine.Sound.Play
+        
+        kind |> function
+        | Coin -> viewSetting.coinSE
+        | Medical -> viewSetting.medicalSE
+        | Enter -> viewSetting.enterSE
+        | Click -> viewSetting.clickSE
+        |> play
+        |> ignore
     }
 
     let init() = Logic.Model.init(setting, gameSetting, apiKey, port)
@@ -100,18 +124,6 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
       messenger.Dispatch(SetMode <| ErrorMode e)
     )
 
-
-  let background =
-    let rect =
-      Rectangle.init zero gameSetting.areaSize
-      |>> map float32
-      |> Rectangle.toRectangleShape
-
-    new asd.GeometryObject2D(
-      Shape = rect,
-      Color = asd.Color(237, 233, 161, 255)
-    )
-
   let backLayer = new asd.Layer2D()
 
   let mainLayer = new asd.Layer2D(IsUpdated = false, IsDrawn = false)
@@ -125,7 +137,7 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
   ]
 
   let player =
-    new GameObjectView(DrawingPriority = 2)
+    new PlayerView(DrawingPriority = 2)
 
   let hpObj = new asd.GeometryObject2D()
 
@@ -148,8 +160,8 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
     messenger
       .Where(fun x -> x.mode = GameMode)
       .Select(fun x ->
-        [ for a in x.game.flyingCats -> (a.Key, a.object) ]
-      ).Subscribe(new ActorsUpdater<_, _, _>(mainLayer, fun() -> new FlyingCatView(DrawingPriority = 1)))
+        [ for a in x.game.flyingCats -> (a.Key, a) ]
+      ).Subscribe(new ActorsUpdater<_, _, FlyingCat>(mainLayer, fun() -> new FlyingCatView(DrawingPriority = 1)))
       |> ignore
 
     let areaX = float32 gameSetting.areaSize.x
@@ -195,6 +207,8 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
   let titleFont = createFont viewSetting.titleSize 0
   let headerFont = createFont viewSetting.headerSize 0
   let textFont = createFont viewSetting.textSize 0
+  let boldFont = createFont viewSetting.textSize 1
+  let smallFont = createFont viewSetting.smallTextSize 0
   let largeFont = createFont viewSetting.largeSize 1
 
   let mouse, window =
@@ -226,8 +240,10 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
               | Large s ->
                 UI.TextWith(s, largeFont)
               | Text s -> UI.Text s
+              | BoldText s -> UI.TextWith(s, boldFont)
+              | SmallText s -> UI.TextWith(s, smallFont)
               | Line -> UI.Rect(viewSetting.lineWidth, 0.8f)
-              | Button(s, f) -> UI.Button(s, f)
+              | Button(s, f) -> UI.Button(s, fun() -> f())
             )
 
           if not x then
@@ -284,8 +300,7 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
     this.AddLayer(longPressArcLayer)
 
     backLayer.AddPostEffect(new NijiPostEffect())
-    backLayer.AddObject(background)
-    backLayer.AddCamera(gameSetting)
+    //backLayer.AddCamera(gameSetting)
 
     mainLayer.AddCamera(gameSetting)
     mainLayer.AddObject(hpObj)
@@ -313,12 +328,18 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
       let isRelease = isState asd.ButtonState.Release
 
       while true do
-        messenger.LastModel.mode |> function
-        | GameMode when isRelease(asd.Keys.Escape) ->
-          messenger.Dispatch(SetMode PauseMode)
-        | PauseMode when isRelease(asd.Keys.Escape) ->
-          messenger.Dispatch(SetMode GameMode)
-        | _ -> ()
+        if isRelease asd.Keys.Escape then
+          messenger.LastModel.mode |> function
+          | CreditMode _
+          | SelectMode
+          | GameOverMode
+            ->
+            messenger.Dispatch(SetMode TitleMode)
+          | GameMode ->
+            messenger.Dispatch(SetMode PauseMode)
+          | PauseMode  ->
+            messenger.Dispatch(SetMode GameMode)
+          | _ -> ()
 
         asd.Engine.Keyboard.GetKeyState asd.Keys.Space
         |> function

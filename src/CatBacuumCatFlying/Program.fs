@@ -90,11 +90,11 @@ let viewSetting = {
       "sound/cat5.ogg"
       "sound/ubaiai.ogg"
     |]
-    volume = 0.3f
+    volume = 0.9f
   }
 
   bacuumSE = "sound/vacuum-cleaner-operation1.ogg"
-  bacuumVolume = 0.2f
+  bacuumVolume = 0.6f
   bacuumFadeSec = 0.2f
 }
 

@@ -293,7 +293,7 @@ module Model =
         else Cmd.none
       )
 
-    | _, SetMode SelectMode ->
+    | _, SetMode SelectMode when Array.isEmpty model.categories ->
       { model with prevMode = model.mode; mode = SelectMode }
       , async {
         let! child =

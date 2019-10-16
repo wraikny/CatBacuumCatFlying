@@ -313,12 +313,18 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
       let isRelease = isState asd.ButtonState.Release
 
       while true do
-        messenger.LastModel.mode |> function
-        | GameMode when isRelease(asd.Keys.Escape) ->
-          messenger.Dispatch(SetMode PauseMode)
-        | PauseMode when isRelease(asd.Keys.Escape) ->
-          messenger.Dispatch(SetMode GameMode)
-        | _ -> ()
+        if isRelease asd.Keys.Escape then
+          messenger.LastModel.mode |> function
+          | CreditMode _
+          | SelectMode
+          | GameOverMode
+            ->
+            messenger.Dispatch(SetMode TitleMode)
+          | GameMode ->
+            messenger.Dispatch(SetMode PauseMode)
+          | PauseMode  ->
+            messenger.Dispatch(SetMode GameMode)
+          | _ -> ()
 
         asd.Engine.Keyboard.GetKeyState asd.Keys.Space
         |> function

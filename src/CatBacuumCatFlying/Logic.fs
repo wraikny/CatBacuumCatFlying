@@ -407,9 +407,11 @@ module Model =
       model, Cmd.ofMsg(SetMode GameMode)
 
     | PauseMode, LongPress ->
+      model.port.clear()
       model |> Model.Restart, Cmd.ofMsg(SetMode TitleMode)
 
     | GameOverMode, LongPress ->
+      model.port.clear()
       model |> Model.Restart, Cmd.ofMsg(SetMode TitleMode)
 
     | _

@@ -74,6 +74,7 @@ let viewSetting = {
   headerSize = 35
   largeSize = 30
   textSize = 20
+  smallTextSize = 16
   lineWidth = 5.0f
 
   longPressFrame = 60

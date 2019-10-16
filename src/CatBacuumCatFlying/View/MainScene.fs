@@ -100,18 +100,6 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
       messenger.Dispatch(SetMode <| ErrorMode e)
     )
 
-
-  let background =
-    let rect =
-      Rectangle.init zero gameSetting.areaSize
-      |>> map float32
-      |> Rectangle.toRectangleShape
-
-    new asd.GeometryObject2D(
-      Shape = rect,
-      Color = asd.Color(237, 233, 161, 255)
-    )
-
   let backLayer = new asd.Layer2D()
 
   let mainLayer = new asd.Layer2D(IsUpdated = false, IsDrawn = false)
@@ -125,7 +113,7 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
   ]
 
   let player =
-    new GameObjectView(DrawingPriority = 2)
+    new PlayerView(DrawingPriority = 2)
 
   let hpObj = new asd.GeometryObject2D()
 
@@ -148,8 +136,8 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
     messenger
       .Where(fun x -> x.mode = GameMode)
       .Select(fun x ->
-        [ for a in x.game.flyingCats -> (a.Key, a.object) ]
-      ).Subscribe(new ActorsUpdater<_, _, _>(mainLayer, fun() -> new FlyingCatView(DrawingPriority = 1)))
+        [ for a in x.game.flyingCats -> (a.Key, a) ]
+      ).Subscribe(new ActorsUpdater<_, _, FlyingCat>(mainLayer, fun() -> new FlyingCatView(DrawingPriority = 1)))
       |> ignore
 
     let areaX = float32 gameSetting.areaSize.x
@@ -284,8 +272,7 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
     this.AddLayer(longPressArcLayer)
 
     backLayer.AddPostEffect(new NijiPostEffect())
-    backLayer.AddObject(background)
-    backLayer.AddCamera(gameSetting)
+    //backLayer.AddCamera(gameSetting)
 
     mainLayer.AddCamera(gameSetting)
     mainLayer.AddObject(hpObj)

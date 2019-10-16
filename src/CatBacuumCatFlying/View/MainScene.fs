@@ -183,6 +183,7 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
   let titleFont = createFont viewSetting.titleSize 0
   let headerFont = createFont viewSetting.headerSize 0
   let textFont = createFont viewSetting.textSize 0
+  let boldFont = createFont viewSetting.textSize 1
   let largeFont = createFont viewSetting.largeSize 1
 
   let mouse, window =
@@ -214,6 +215,7 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
               | Large s ->
                 UI.TextWith(s, largeFont)
               | Text s -> UI.Text s
+              | BoldText s -> UI.TextWith(s, boldFont)
               | Line -> UI.Rect(viewSetting.lineWidth, 0.8f)
               | Button(s, f) -> UI.Button(s, f)
             )

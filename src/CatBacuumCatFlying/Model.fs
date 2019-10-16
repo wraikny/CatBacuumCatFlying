@@ -265,6 +265,7 @@ module ViewModel =
     | Title of string
     | Header of string
     | Text of string
+    | BoldText of string
     | Large of string
     | Line
     | Button of string * (unit -> unit)
@@ -305,10 +306,12 @@ module ViewModel =
     | TitleMode ->
       [
         Title model.setting.title
-        Text "by wraikny@Amusement Creators"
-        Line
+        //Text "by wraikny@Amusement Creators"
+        //Line
         Text "ゲーム操作: スペース / ポーズ: Esc"
-        msgButton "ゲームスタート(スペース長押し)" <| SetMode SelectMode
+        Text "赤: ダメージ, 緑: 回復, 青: 得点"
+        Line
+        BoldText "ゲームスタート(スペースボタン長押し)" // <| SetMode SelectMode
         Line
         msgButton "クレジットを開く" <| SetMode (CreditMode One)
       ]
@@ -369,7 +372,7 @@ module ViewModel =
         Text scoreText
 
         Line
-        urlButton "ツイートする" (
+        urlButton "ツイートする(ブラウザを開きます)" (
           sprintf """「%s」をプレイしました！
 %s
 %s

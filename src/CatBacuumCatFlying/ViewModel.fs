@@ -53,7 +53,7 @@ let view (model: Model) dispatch =
       Line
       Text "ゲーム操作: スペース / ポーズ: Esc"
       Line
-      BoldText "ゲームスタート:スペースボタン長押し" // <| SetMode SelectMode
+      BoldText "ゲームスタート:スペースボタン長押し"
       Line
       msgButton "クレジットを開く" <| SetMode (CreditMode One)
     ]

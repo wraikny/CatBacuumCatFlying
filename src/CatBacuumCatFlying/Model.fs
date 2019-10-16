@@ -1,4 +1,4 @@
-namespace Cbcf
+﻿namespace Cbcf
 
 open Affogato
 open Affogato.Helper
@@ -119,8 +119,6 @@ type GameModel = {
   imagePaths: Map<int, string []>
   category: int
 } with
-  //member inline x.Speeds =
-  //  x.setting.initSpeeds + (float32 x.level) *. x.setting.diffSpeeds
 
   static member inline Init(setting) = {
     category = zero
@@ -263,10 +261,3 @@ type Msg =
 with
   static member inline Tick = GameMsg Tick
   static member inline AddFlyingCat x = GameMsg <| AddFlyingCat x
-
-
-//type Port =
-//  | LoadCatsCache of (int * string) []
-//  | SelectedCategory of (((int * string []) -> unit) -> Async<unit>)
-//  | OutputLog of filepath:string * string
-

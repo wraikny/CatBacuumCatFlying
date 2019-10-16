@@ -198,7 +198,6 @@ module GameModel =
       |> andThen addFlyingCatCheck
 
     | AddFlyingCat x ->
-      //printfn "AddFlyingCat %A" x
       { model with
           flyingCats = Array.append model.flyingCats [|x|]
       }, Cmd.none
@@ -264,15 +263,6 @@ module Model =
         printfn "%A" e
     }
 
-  //let selectedCategory f dispatch =
-  //  async {
-  //    try
-  //      do! f (AddImagePaths >> dispatch)
-  //      printfn "finished selectedcategory"
-  //    with e ->
-  //      printfn "%A" e
-  //  }
-
   let logfileLock = System.Object()
 
   let outputLog filepath t =
@@ -308,7 +298,6 @@ module Model =
       { model with
           game = { model.game with imagePaths = newMap }
       }, (
-        //let ps = newMap |> Map.find (fst model.categories.[model.categoryIndex])
         if model.mode = WaitingMode then
           Cmd.ofMsg(SetMode GameMode)
         else Cmd.none
@@ -421,9 +410,6 @@ module Model =
     | GameMode, Release ->
       model.port.toggleBacuum(false)
       model |> chain GameModel.release
-    
-    //| ErrorMode _, LongPress ->
-    //  model, Cmd.ofMsg(SetMode model.prevMode)
 
     | PauseMode, Release ->
       model, Cmd.ofMsg(SetMode GameMode)

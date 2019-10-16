@@ -305,7 +305,7 @@ module ViewModel =
     | TitleMode ->
       [
         Title model.setting.title
-        Text "by wraikny"
+        Text "by wraikny@Amusement Creators"
         Line
         Text "ゲーム操作: スペース / ポーズ: Esc"
         msgButton "ゲームスタート(スペース長押し)" <| SetMode SelectMode
@@ -318,10 +318,12 @@ module ViewModel =
         yield Header "モードセレクト"
         if model.categories.Length = 0 then
           yield Text "データをダウンロード中..."
+          yield Text "しばらくお待ち下さい"
+          yield Line
           yield Text "セキュリティソフトによって処理が一時停止する場合があります"
         else
           let len = model.categories.Length
-          let createItem i =
+          let inline createItem i =
              model.categories.[(model.categoryIndex + i + len) % len]
              |> snd
 
@@ -337,8 +339,9 @@ module ViewModel =
     | WaitingMode ->
       [
         Header "画像をダウンロード中..."
-        Text "セキュリティソフトによって処理が一時停止する場合があります"
         Text "しばらくお待ち下さい"
+        Line
+        Text "セキュリティソフトによって処理が一時停止する場合があります"
       ]
     | GameMode -> []
     | ErrorMode e ->

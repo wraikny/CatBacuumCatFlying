@@ -50,6 +50,9 @@ type GameSetting = {
   scoreDiffPerSec: uint32
   levelScoreStage: uint32
   levelFrameStage: uint32
+
+  medicalImagePath: string
+  coinImagePath: string
 } with
   member inline x.PlayerInitPosition =
     let ps = x.playerSize
@@ -189,14 +192,22 @@ type Setting = {
 
 type F = unit -> unit
 
+type SEKind =
+  | Medical
+  | Coin
+  | Enter
+  | Click
+
 type Port = {
   addEffect: FlyingCat -> unit
   clear: F
 
-  bacuumOn: F
-  bacuumOff: F
+  toggleBacuum: bool -> unit
+
   pause: F
   resume: F
+
+  playSE: SEKind -> unit
 }
 
 type Model = {
@@ -270,16 +281,18 @@ module ViewModel =
     | Line
     | Button of string * (unit -> unit)
 
-  let private urlButton text (url: string) =
-    Button(text, fun() ->
-      url
-      |> System.Diagnostics.Process.Start
-      |> ignore
-    )
-  let view model dispatch =
+  let view (model: Model) dispatch =
+    let inline urlButton text (url: string) =
+      Button(text, fun() ->
+        url
+        |> System.Diagnostics.Process.Start
+        |> ignore
+      )
 
     let inline msgButton text msg =
-      Button(text, fun() -> dispatch msg)
+      Button(text, fun() ->
+        dispatch msg
+      )
 
     model.mode |> function
     | CreditMode page ->
@@ -295,8 +308,9 @@ module ViewModel =
             msgButton "次へ" <| SetMode (CreditMode Two)
           ]
         | Two -> yield! [
-            urlButton "掃除機: いらすとや" "https://www.irasutoya.com/"
-            urlButton "効果音素材: ポケットサウンド" "https://pocket-se.info"
+            urlButton "イラスト: いらすとや" "https://www.irasutoya.com/"
+            urlButton "効果音(猫): ポケットサウンド" "https://pocket-se.info"
+            urlButton "効果音(他): くらげ工匠" "http://www.kurage-kosho.info/"
             urlButton "BGM: d-elf.com" "https://www.d-elf.com/"
             Line
             msgButton "タイトルに戻る" <| SetMode TitleMode

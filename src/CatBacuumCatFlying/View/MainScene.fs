@@ -27,6 +27,11 @@ type ViewSetting = {
   bacuumSE: string
   bacuumVolume: float32
   bacuumFadeSec: float32
+
+  medicalSE: string
+  coinSE: string
+  enterSE: string
+  clickSE: string
 }
 
 
@@ -62,17 +67,18 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
         scoreObj.Text <- " "
         hitEffect.Clear()
 
-      bacuumOn = fun() ->
-        let seid = asd.Engine.Sound.Play(bacuumSE)
-        bacuumSEId <- Some seid
-        asd.Engine.Sound.SetVolume(seid, viewSetting.bacuumVolume)
-        asd.Engine.Sound.FadeIn(seid, viewSetting.bacuumFadeSec)
+      toggleBacuum = function
+        | true ->
+          let seid = asd.Engine.Sound.Play(bacuumSE)
+          bacuumSEId <- Some seid
+          asd.Engine.Sound.SetVolume(seid, viewSetting.bacuumVolume)
+          asd.Engine.Sound.FadeIn(seid, viewSetting.bacuumFadeSec)
 
-      bacuumOff = fun() ->
-        bacuumSEId |> iter(fun seid ->
-          asd.Engine.Sound.FadeOut(seid, viewSetting.bacuumFadeSec)
-          bacuumSEId <- None
-        )
+        | false ->
+          bacuumSEId |> iter(fun seid ->
+            asd.Engine.Sound.FadeOut(seid, viewSetting.bacuumFadeSec)
+            bacuumSEId <- None
+          )
 
       pause = fun() ->
         asd.Engine.Sound.Pause(bgmId)
@@ -81,6 +87,23 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
       resume = fun() ->
         asd.Engine.Sound.Resume(bgmId)
         bacuumSEId |> iter asd.Engine.Sound.Resume
+
+      //playSE = fun path ->
+      //  let source = asd.Engine.Sound.CreateSoundSource(path, true)
+      //  let id = asd.Engine.Sound.Play
+      //  ()
+      playSE = fun kind ->
+        let inline play path =
+          asd.Engine.Sound.CreateSoundSource(path, true)
+          |> asd.Engine.Sound.Play
+        
+        kind |> function
+        | Coin -> viewSetting.coinSE
+        | Medical -> viewSetting.medicalSE
+        | Enter -> viewSetting.enterSE
+        | Click -> viewSetting.clickSE
+        |> play
+        |> ignore
     }
 
     let init() = Logic.Model.init(setting, gameSetting, apiKey, port)
@@ -217,7 +240,7 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
               | Text s -> UI.Text s
               | BoldText s -> UI.TextWith(s, boldFont)
               | Line -> UI.Rect(viewSetting.lineWidth, 0.8f)
-              | Button(s, f) -> UI.Button(s, f)
+              | Button(s, f) -> UI.Button(s, fun() -> f())
             )
 
           if not x then

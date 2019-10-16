@@ -43,6 +43,9 @@ let gameSetting: GameSetting = {
   scoreDiffPerSec = 5u
   levelScoreStage = 100u
   levelFrameStage = 60u * 5u
+
+  medicalImagePath = "drug_taima_ha.png"
+  coinImagePath = "coin_kinka.png"
 }
 
 open Cbcf.View
@@ -96,6 +99,11 @@ let viewSetting = {
   bacuumSE = "sound/vacuum-cleaner-operation1.ogg"
   bacuumVolume = 0.6f
   bacuumFadeSec = 0.2f
+
+  coinSE = "sound/status07.ogg"
+  medicalSE = "sound/heal01.ogg"
+  enterSE = "sound/button67.ogg"
+  clickSE = "sound/click03.ogg"
 }
 
 let bgmPath = "sound/FreeBGM_nekomimi.ogg"
@@ -111,7 +119,7 @@ let main _ =
   
   asd.Engine.Initialize(setting.title, 800, 450, asd.EngineOption())
   |> ignore
-
+  
   #if DEBUG
   asd.Engine.File.AddRootDirectory("Resources")
   #else

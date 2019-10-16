@@ -53,7 +53,7 @@ type GameObjectView() =
       )
 
     update lastPath x.imagePath <| fun x ->
-      if x <> null && System.IO.File.Exists(x) then
+      if x <> null && asd.Engine.File.Exists(x) then
         this.Texture <- asd.Engine.Graphics.CreateTexture2D(x)
 
 
@@ -68,44 +68,44 @@ type PlayerView() =
 type FlyingCatView() =
   inherit GameObjectView()
 
-  let backObj = new asd.GeometryObject2D(DrawingPriority = base.DrawingPriority - 1)
+  //let backObj = new asd.GeometryObject2D(DrawingPriority = base.DrawingPriority - 1)
 
   let mutable lastKind = None
 
-  override this.OnAdded() =
-    base.OnAdded()
-    base.AddDrawnChild(
-      backObj
-      , asd.ChildManagementMode.All
-      , asd.ChildTransformingMode.All
-      , asd.ChildDrawingMode.Nothing
-    )
-    backObj.AddCoroutineAsParallel(seq {
-      while true do
-        backObj.Angle <- backObj.Angle + 5.0f
-        yield()
-    })
+  //override this.OnAdded() =
+  //  base.OnAdded()
+  //  base.AddDrawnChild(
+  //    backObj
+  //    , asd.ChildManagementMode.All
+  //    , asd.ChildTransformingMode.All
+  //    , asd.ChildDrawingMode.Nothing
+  //  )
+  //  backObj.AddCoroutineAsParallel(seq {
+  //    while true do
+  //      backObj.Angle <- backObj.Angle + 5.0f
+  //      yield()
+  //  })
 
   interface IUpdatee<FlyingCat> with
     member this.Update(x) =
       base.Update(x.object)
 
-      if lastKind.IsNone || lastKind.Value <> x.kind then
-        lastKind <- Some x.kind
+      //if lastKind.IsNone || lastKind.Value <> x.kind then
+      //  lastKind <- Some x.kind
 
-        let size = x.object.Area.size |> Vector2.toVector2DF
-        let area =
-          let size = size * 1.3f
-          asd.RectF(size * -0.5f, size)
+      //  let size = x.object.Area.size |> Vector2.toVector2DF
+      //  let area =
+      //    let size = size * 1.3f
+      //    asd.RectF(size * -0.5f, size)
 
-        let color, shape = x.kind |> function
-          | HP a when a > 0.0f ->
-            asd.Color(0, 255, 0, 255), new asd.RectangleShape(DrawingArea = area)
-          | HP _ ->
-            asd.Color(255, 0, 0, 255), new asd.RectangleShape(DrawingArea = area)
-          | Score _ ->
-            asd.Color(0, 0, 255, 255), new asd.RectangleShape(DrawingArea = area)
+      //  let color, shape = x.kind |> function
+      //    | HP a when a > 0.0f ->
+      //      asd.Color(0, 255, 0, 255), new asd.RectangleShape(DrawingArea = area)
+      //    | HP _ ->
+      //      asd.Color(255, 0, 0, 255), new asd.RectangleShape(DrawingArea = area)
+      //    | Score _ ->
+      //      asd.Color(0, 0, 255, 255), new asd.RectangleShape(DrawingArea = area)
 
-        backObj.Position <- size * 0.5f
-        backObj.Color <- color
-        backObj.Shape <- shape
+      //  backObj.Position <- size * 0.5f
+      //  backObj.Color <- color
+      //  backObj.Shape <- shape

@@ -61,6 +61,8 @@ vec3 main_() {
     return col;
 }
 
+out vec4 outOutput;
+
 void main() {
     outOutput = vec4(main_(), 1.0);
 }

@@ -7,7 +7,7 @@ let setting = {
   theCatApiCacheDirectory = ".TheCatApiCache"
   gameStartFileCount = 50
 
-  errorLogPath = "Log.txt"
+  errorLogPath = "ErrorLog.txt"
 
   title = "Cat Bacuum Cat Flying"
 }

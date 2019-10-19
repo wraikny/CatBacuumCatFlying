@@ -1,5 +1,7 @@
 ﻿module Cbcf.ViewModel
 
+open FSharpPlus
+
 type UI =
   | Title of string
   | Header of string
@@ -115,11 +117,14 @@ let view (model: Model) dispatch =
 
       Line
       urlButton "ツイートする(ブラウザを開きます)" (
-        sprintf """「%s」をプレイしました！
+        let tag =
+          model.setting.title
+          |> String.replace " " ""
+        sprintf """#%s をプレイしました！
 %s
 %s
 @wraikny"""
-          model.setting.title levelText scoreText
+          tag levelText scoreText
         |> System.Web.HttpUtility.UrlEncode
         |> sprintf "https://twitter.com/intent/tweet?text=%s"
       )

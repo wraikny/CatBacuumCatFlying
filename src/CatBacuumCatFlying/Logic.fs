@@ -365,7 +365,7 @@ module Model =
           categories = categories
       }, Cmd.ofSub sub
 
-    | SelectMode, Push when model.categories.Length > 0 ->
+    | SelectMode, Release when model.categories.Length > 0 ->
       model.port.playSE(Click)
       { model with
           categoryIndex =

@@ -355,7 +355,7 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
           holdCount <- 0
 
         | asd.ButtonState.Hold ->
-          if messenger.LastModel.mode.EnabledLongPress && (holdCount <= f + wf) then
+          if messenger.LastModel.mode.EnabledLongPress && (holdCount < f + wf) then
             holdCount <- holdCount + one
 
             if holdCount > wf then
@@ -363,8 +363,7 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
                 float32 (holdCount - wf) / float32 f
               )
 
-            if holdCount > f + wf then
-              holdCount <- 0
+            if holdCount = f + wf then
               longPressArc.SetRate(0.0f)
               messenger.Dispatch(LongPress)
 

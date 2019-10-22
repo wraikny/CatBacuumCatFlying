@@ -18,11 +18,21 @@ open Fake.IO.FileSystemOperators
 open Fake.IO.Globbing.Operators
 open Fake.Core.TargetOperators
 
+let debugDir = "src/CatBacuumCatFlying/bin/x86/Debug/net472"
+
 Target.create "Clean" (fun _ ->
     !! "src/**/bin"
     ++ "src/**/obj"
     |> Shell.cleanDirs 
 )
+
+Target.create "CopyResources" <| fun _ ->
+    let resources = "Resources"
+    let targetDir = sprintf "%s/%s" debugDir resources
+
+    Directory.create(debugDir)
+    Directory.delete(targetDir) |> ignore
+    Shell.copyDir (targetDir) resources (fun _ -> true)
 
 Target.create "Build" (fun _ ->
     !! "src/**/*.*proj"

@@ -101,7 +101,7 @@ let viewSetting = {
   bacuumVolume = 0.6f
   bacuumFadeSec = 0.2f
 
-  coinSE = "sound/status07.ogg"
+  coinSE = "sound/status03.ogg"
   medicalSE = "sound/heal01.ogg"
   enterSE = "sound/button67.ogg"
   clickSE = "sound/click03.ogg"

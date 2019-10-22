@@ -6,7 +6,3 @@ nuget AltseedDotNet = 1.1.6.1
 nuget FSharp.Data
 nuget FSharpPlus
 nuget System.Reactive
-// [ FAKE GROUP ]
-group Build
-    storage none
-    source https://api.nuget.org/v3/index.json

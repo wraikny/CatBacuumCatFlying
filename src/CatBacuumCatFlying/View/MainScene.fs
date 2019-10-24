@@ -44,6 +44,7 @@ open System.Reactive
 open System.Reactive.Linq
 open System.Threading
 open Cbcf
+open Cbcf.Update
 open Cbcf.ViewModel
 open Elmish
 open Elmish.Reactive
@@ -107,9 +108,9 @@ type MainScene(bgmId: int, setting: Setting, gameSetting: GameSetting, viewSetti
         |> ignore
     }
 
-    let init() = Logic.Model.init(setting, gameSetting, apiKey, port)
+    let init() = Update.Model.init(setting, gameSetting, apiKey, port)
 
-    Program.mkProgram init Logic.Model.update (fun m _ -> m)
+    Program.mkProgram init Update.Model.update (fun m _ -> m)
     #if DEBUG
     |> Program.withTrace(fun msg _ ->
       if msg <> Msg.Tick then

@@ -18,8 +18,8 @@
     <Compile Include="Utils.fs" />
     <Compile Include="IO.fs" />
     <Compile Include="Model.fs" />
+    <Compile Include="Update.fs" />
     <Compile Include="ViewModel.fs" />
-    <Compile Include="Logic.fs" />
     <Compile Include="View\NijiPostEffect.fs" />
     <Compile Include="View\Camera.fs" />
     <Compile Include="View\GameObjectView.fs" />

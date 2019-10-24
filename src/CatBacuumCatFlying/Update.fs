@@ -1,10 +1,31 @@
-namespace Cbcf.Logic
+namespace Cbcf.Update
 
 open Cbcf
 open Affogato
 open Affogato.Helper
 open Affogato.Collections
 open FSharpPlus
+
+type GameMsg =
+  | AddFlyingCat of FlyingCat
+  | Tick
+  | SetPlayerImage of string
+
+
+type Msg =
+  | SetMode of Mode
+  | GameMsg of GameMsg
+
+  | SetCategories of (int * string) []
+  | AddImagePaths of category:int * filepath:string []
+
+  | DirectoryNotFound
+
+  | Push | Release | LongPress
+with
+  static member inline Tick = GameMsg Tick
+  static member inline AddFlyingCat x = GameMsg <| AddFlyingCat x
+
 
 module Random =
   let rand = System.Random()

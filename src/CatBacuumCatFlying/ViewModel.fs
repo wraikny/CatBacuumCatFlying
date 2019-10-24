@@ -1,5 +1,5 @@
 ﻿module Cbcf.ViewModel
-
+open Cbcf.Update
 open FSharpPlus
 
 type UI =

@@ -17,6 +17,7 @@
     <Compile Include="Elmish.Reactive.fs" />
     <Compile Include="Utils.fs" />
     <Compile Include="IO.fs" />
+    <Compile Include="FireBase.fs" />
     <Compile Include="Model.fs" />
     <Compile Include="Update.fs" />
     <Compile Include="ViewModel.fs" />

@@ -166,6 +166,7 @@ type Mode =
   | TitleMode
   | SelectMode
   | WaitingMode
+  | HowToPlayMode
   | GameMode
   | GameOverMode
   | PauseMode

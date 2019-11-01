@@ -53,9 +53,7 @@ let view (model: Model) dispatch =
       Title model.setting.title
       SmallText "wraikny @ Amusement Creators 雙峰祭2019"
       Line
-      Text "ゲーム操作: スペース / ポーズ: Esc"
-      Line
-      BoldText "ゲームスタート:スペースボタン長押し"
+      BoldText "スペースキー長押しでスタート！"
       Line
       msgButton "クレジットを開く" <| SetMode (CreditMode One)
     ]
@@ -64,32 +62,46 @@ let view (model: Model) dispatch =
     [
       yield Header "モードセレクト"
       if model.categories.Length = 0 then
-        yield Text "データをダウンロード中..."
-        yield Text "しばらくお待ち下さい"
-        yield Line
-        yield Text "セキュリティソフトによって処理が一時停止する場合があります"
+        yield! [
+          Text "データをダウンロード中..."
+          BoldText "しばらくお待ち下さい"
+          Line
+          Text "セキュリティソフトによって処理が一時停止する場合があります"
+        ]
       else
         let len = model.categories.Length
         let inline createItem i =
            model.categories.[(model.categoryIndex + i + len) % len]
            |> snd
 
-        yield Text <| createItem -1
-        yield Large <| createItem 0
-        yield Text <| createItem 1
-        
         yield! [
           Line
-          Text "スペースボタンで変更 / 長押しで決定"
+          Text <| createItem -1
+          Large <| createItem 0
+          Text <| createItem 1
+          Line
+          BoldText "スペースキーで変更 / 長押しで決定"
         ]
     ]
   | WaitingMode ->
     [
       Header "画像をダウンロード中..."
-      Text "しばらくお待ち下さい"
       Line
+      BoldText "しばらくお待ち下さい"
       Text "セキュリティソフトによって処理が一時停止する場合があります"
     ]
+  | HowToPlayMode ->
+    [
+      Header "遊び方"
+      Text "掃除機で猫を吸って、飛んでくる猫を避けよう！！！"
+      Text "猫に当たると走馬灯が現れます。猫に想いを馳せる。"
+      Text "クッキーを取ると回復！！　コインを取ると得点！！"
+      Text "高ステージ・ハイスコアを目指してね！！"
+      Line
+      BoldText "ゲーム操作はスペースキーだけ！"
+      Text "Escキーで一時停止もできるよ！"
+    ]
+
   | GameMode -> []
   | ErrorMode e ->
     [
@@ -103,8 +115,8 @@ let view (model: Model) dispatch =
   | PauseMode ->
     [
       Header "ポーズ"
-      Text "スペース/Escボタンでコンティニュー"
-      Text "スペースボタン長押しでタイトル"
+      Text "タイトルに戻る: スペースキー長押し"
+      BoldText "コンティニュー: スペースキー"
     ]
 
   | GameOverMode ->
@@ -129,6 +141,6 @@ let view (model: Model) dispatch =
         |> sprintf "https://twitter.com/intent/tweet?text=%s"
       )
       Line
-      Text "スペースボタン長押しでタイトル"
+      BoldText "スペースキー長押しでタイトル"
 
     ]

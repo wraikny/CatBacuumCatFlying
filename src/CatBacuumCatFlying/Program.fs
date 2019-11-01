@@ -44,8 +44,9 @@ let gameSetting: GameSetting = {
   levelScoreStage = 100u
   levelFrameStage = 60u * 5u
 
-  medicalImagePath = "drug_taima_ha.png"
-  coinImagePath = "coin_kinka.png"
+  //medicalImagePath = "drug_taima_ha.png"
+  medicalImagePath = "sweets_cookie.png"
+  coinImagePath = "money_kinka_krugarrand.png"
 }
 
 open Cbcf.View
@@ -77,8 +78,8 @@ let viewSetting = {
   smallTextSize = 16
   lineWidth = 5.0f
 
-  longPressFrame = 60
-  longPressFrameWait = 30
+  longPressFrame = 45
+  longPressFrameWait = 10
 
 
   hitEffect = {

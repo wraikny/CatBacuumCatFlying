@@ -9,7 +9,7 @@ open FSharpPlus
 type GameMsg =
   | AddFlyingCat of FlyingCat
   | Tick
-  | SetPlayerImage of string
+  //| SetPlayerImage of string
 
 
 type Msg =
@@ -223,9 +223,9 @@ module GameModel =
           flyingCats = Array.append model.flyingCats [|x|]
       }, Cmd.none
 
-    | SetPlayerImage s ->
-      model
-      |> mapPlayer(fun p -> { p with imagePath = s }), Cmd.none
+    //| SetPlayerImage s ->
+    //  model
+    //  |> mapPlayer(fun p -> { p with imagePath = s }), Cmd.none
 
 
   let push model =
@@ -346,15 +346,17 @@ module Model =
     | WaitingMode, SetMode GameMode ->
       let category = fst model.categories.[model.categoryIndex]
       let ps = model.game.imagePaths |> Map.tryFind category |> Option.defaultValue empty
-      let cmd =
-        let i = Random.rand.Next(0, ps.Length - 1)
-        SetPlayerImage ps.[i] |> GameMsg |> Cmd.ofMsg
+      let index = Random.rand.Next(0, ps.Length - 1)
 
       { model with
           prevMode = model.mode
-          mode = GameMode
-          game = { model.game with category = category }
-      }, cmd
+          mode = HowToPlayMode
+          game =
+            { model.game with
+                category = category
+                player = { model.game.player with imagePath = ps.[index] }
+            }
+      }, Cmd.none
 
     | _, SetMode (ErrorMode e as m) ->
       outputLog (model.setting.errorLogPath) (string e)
@@ -420,6 +422,9 @@ module Model =
           ]
       }
       |> Option.defaultValue (model, Cmd.none)
+
+    | HowToPlayMode, LongPress ->
+      model, Cmd.ofMsg(SetMode GameMode)
 
     | GameMode, GameMsg m ->
       model |> chain (GameModel.update model.port m)

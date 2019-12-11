@@ -51,7 +51,7 @@ let view (model: Model) dispatch =
   | TitleMode ->
     [
       Title model.setting.title
-      SmallText "wraikny @ Amusement Creators 雙峰祭2019"
+      SmallText "wraikny @ Amusement Creators C97"
       Line
       BoldText "スペースキー長押しでスタート！"
       Line
@@ -108,7 +108,7 @@ let view (model: Model) dispatch =
       Text <| e.GetType().ToString()
       Text <| e.Message
       Line
-      Text "スタッフ/製作者に教えてもらえると嬉しいです"
+      Text "製作者に教えてもらえると嬉しいです"
       Text (sprintf "ログファイルは'%s'に出力されます" model.setting.errorLogPath)
     ]
 
